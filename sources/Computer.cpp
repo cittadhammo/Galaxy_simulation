@@ -112,16 +112,18 @@ void Computer::init()
 
 void Computer::compute()
 {
-	step_buffer = ComputeShader::Buffer(Simulator::step, Permissions::Read);
-	smoothing_length_buffer = ComputeShader::Buffer(Simulator::smoothing_length, Permissions::Read);
-	interaction_rate_buffer = ComputeShader::Buffer(Simulator::interaction_rate, Permissions::Read);
-	black_hole_mass_buffer = ComputeShader::Buffer(Simulator::black_hole_mass, Permissions::Read);
-	types_buffer = ComputeShader::Buffer(star_types, Permissions::Read);  // Add this line
+    step_buffer = ComputeShader::Buffer(Simulator::step, Permissions::Read);
+    smoothing_length_buffer = ComputeShader::Buffer(Simulator::smoothing_length, Permissions::Read);
+    interaction_rate_buffer = ComputeShader::Buffer(Simulator::interaction_rate, Permissions::Read);
+    black_hole_mass_buffer = ComputeShader::Buffer(Simulator::black_hole_mass, Permissions::Read);
+    types_buffer = ComputeShader::Buffer(Computer::star_types, Permissions::Read);
+    cl::Buffer negative_attraction_constant_buffer = ComputeShader::Buffer(Menu::negative_attraction_constant, Permissions::Read);
+    cl::Buffer repulsion_constant_buffer = ComputeShader::Buffer(Menu::repulsion_constant, Permissions::Read);
 
-
-	// The interactions computations.
+    // The interactions computations.
     ComputeShader::launch("interactions", { &positions_buffer, &accelerations_buffer, &interaction_rate_buffer,
-        &smoothing_length_buffer, &black_hole_mass_buffer, &types_buffer }, cl::NDRange(accelerations.size()));  // Add types_buffer
+        &smoothing_length_buffer, &black_hole_mass_buffer, &types_buffer, &negative_attraction_constant_buffer, &repulsion_constant_buffer },
+        cl::NDRange(accelerations.size()));
     ComputeShader::get_data(accelerations_buffer, accelerations);
 
     // The integration computation.

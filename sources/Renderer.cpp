@@ -12,50 +12,74 @@ dim::FrameBuffer	Renderer::blur_fbo_2;
 
 void Renderer::init_vbo()
 {
-	// delete buffers
-	glDeleteBuffers(1, &vbo);
-	glDeleteVertexArrays(1, &vao);
+    // Delete buffers
+    glDeleteBuffers(1, &vbo);
+    glDeleteVertexArrays(1, &vao);
 
-	// Create VBO
-	glGenBuffers(1, &vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    // Create VBO
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
-		GLsizeiptr array_size = Computer::positions.size() * sizeof(dim::Vector4);
+    GLsizeiptr positions_size = Computer::positions.size() * sizeof(dim::Vector4);
+    GLsizeiptr speeds_size = Computer::speeds.size() * sizeof(dim::Vector4);
+    GLsizeiptr types_size = Computer::star_types.size() * sizeof(int);
 
-		glBufferData(GL_ARRAY_BUFFER, 2 * array_size, NULL, GL_DYNAMIC_DRAW);
-		glBufferSubData(GL_ARRAY_BUFFER, 0, array_size, Computer::positions.data());
-		glBufferSubData(GL_ARRAY_BUFFER, array_size, array_size, Computer::speeds.data());
+    // Allocate buffer data for positions, speeds, and star types
+    glBufferData(GL_ARRAY_BUFFER, positions_size + speeds_size + types_size, NULL, GL_DYNAMIC_DRAW);
 
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+    // Update positions
+    glBufferSubData(GL_ARRAY_BUFFER, 0, positions_size, Computer::positions.data());
 
-	// Create VAO
-	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    // Update speeds
+    glBufferSubData(GL_ARRAY_BUFFER, positions_size, speeds_size, Computer::speeds.data());
 
-			GLint positions = glGetAttribLocation(dim::Shader::get("galaxy").get_id(), "a_position");
-			glVertexAttribPointer(positions, 4, GL_FLOAT, GL_FALSE, sizeof(dim::Vector4), reinterpret_cast<GLvoid*>(0));
-			glEnableVertexAttribArray(positions);
+    // Update star types
+    glBufferSubData(GL_ARRAY_BUFFER, positions_size + speeds_size, types_size, Computer::star_types.data());
 
-			GLint speeds = glGetAttribLocation(dim::Shader::get("galaxy").get_id(), "a_speed");
-			glVertexAttribPointer(speeds, 4, GL_FLOAT, GL_FALSE, sizeof(dim::Vector4), reinterpret_cast<GLvoid*>(array_size));
-			glEnableVertexAttribArray(speeds);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
+    // Create VAO
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+    GLint positions = glGetAttribLocation(dim::Shader::get("galaxy").get_id(), "a_position");
+    glVertexAttribPointer(positions, 4, GL_FLOAT, GL_FALSE, sizeof(dim::Vector4), reinterpret_cast<GLvoid*>(0));
+    glEnableVertexAttribArray(positions);
+
+    GLint speeds = glGetAttribLocation(dim::Shader::get("galaxy").get_id(), "a_speed");
+    glVertexAttribPointer(speeds, 4, GL_FLOAT, GL_FALSE, sizeof(dim::Vector4), reinterpret_cast<GLvoid*>(positions_size));
+    glEnableVertexAttribArray(speeds);
+
+    GLint star_types = glGetAttribLocation(dim::Shader::get("galaxy").get_id(), "a_starType");
+    glVertexAttribPointer(star_types, 1, GL_INT, GL_FALSE, sizeof(int), reinterpret_cast<GLvoid*>(positions_size + speeds_size));
+    glEnableVertexAttribArray(star_types);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
 }
 
 void Renderer::update_vbo()
 {
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
-		GLsizeiptr array_size = Computer::positions.size() * sizeof(dim::Vector4);
+    GLsizeiptr positions_size = Computer::positions.size() * sizeof(dim::Vector4);
+    GLsizeiptr speeds_size = Computer::speeds.size() * sizeof(dim::Vector4);
+    GLsizeiptr types_size = Computer::star_types.size() * sizeof(int);
 
-		glBufferData(GL_ARRAY_BUFFER, 2 * array_size, NULL, GL_DYNAMIC_DRAW);
-		glBufferSubData(GL_ARRAY_BUFFER, 0, array_size, Computer::positions.data());
-		glBufferSubData(GL_ARRAY_BUFFER, array_size, array_size, Computer::speeds.data());
+    // Allocate buffer data for positions, speeds, and star types
+    glBufferData(GL_ARRAY_BUFFER, positions_size + speeds_size + types_size, NULL, GL_DYNAMIC_DRAW);
 
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+    // Update positions
+    glBufferSubData(GL_ARRAY_BUFFER, 0, positions_size, Computer::positions.data());
+
+    // Update speeds
+    glBufferSubData(GL_ARRAY_BUFFER, positions_size, speeds_size, Computer::speeds.data());
+
+    // Update star types
+    glBufferSubData(GL_ARRAY_BUFFER, positions_size + speeds_size, types_size, Computer::star_types.data());
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void Renderer::draw_vbo()

@@ -1,34 +1,31 @@
-// Define constants for attraction and repulsion
-#define NEGATIVE_ATTRACTION_CONSTANT 1.f
-#define REPULSION_CONSTANT 1.f
-
 // Convert a 4D vector to a 3D vector.
 float3 convert_3(float4 vector)
 {
-	return (float3)(vector.x, vector.y, vector.z);
+    return (float3)(vector.x, vector.y, vector.z);
 }
 
 // Convert a 3D vector to a 4D vector.
 float4 convert_4(float3 vector)
 {
-	return (float4)(vector.x, vector.y, vector.z, 0);
+    return (float4)(vector.x, vector.y, vector.z, 0);
 }
 
 // Give the squared norm of the vector.
 float norm_2(float3 vector)
 {
-	return pow(vector.x, 2) + pow(vector.y, 2) + pow(vector.z, 2);
+    return pow(vector.x, 2) + pow(vector.y, 2) + pow(vector.z, 2);
 }
 
 // Give the squared distance between to points.
 float distance_2(float3 point_1, float3 point_2)
 {
-	return norm_2(point_2 - point_1);
+    return norm_2(point_2 - point_1);
 }
 
 // Handle the interactions between the stars.
 __kernel void interactions(__global float4* positions, __global float4* accelerations,
-    __global float* interaction_rate, __global float* smoothing_length, __global float* black_hole_mass, __global int* types)
+    __global float* interaction_rate, __global float* smoothing_length, __global float* black_hole_mass, __global int* types,
+    __global float* negative_attraction_constant, __global float* repulsion_constant)
 {
     int index = get_global_id(0);
     float3 acc = (float3)(0, 0, 0);
@@ -44,11 +41,11 @@ __kernel void interactions(__global float4* positions, __global float4* accelera
 
             if (type == other_type)
             {
-                sign = (type == -1) ? NEGATIVE_ATTRACTION_CONSTANT : 1.0f; // Use NEGATIVE_ATTRACTION_CONSTANT for negative stars
+                sign = (type == -1) ? *negative_attraction_constant : 1.0f; // Use negative_attraction_constant for negative stars
             }
             else
             {
-                sign = -REPULSION_CONSTANT; // Use REPULSION_CONSTANT for different types repulsing each other
+                sign = -*repulsion_constant; // Use repulsion_constant for different types repulsing each other
             }
 
             acc += sign * (normalize(vector) / (norm_2(vector) + *smoothing_length)) / *interaction_rate;
