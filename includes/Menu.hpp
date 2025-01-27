@@ -35,6 +35,7 @@ public:
 	static float			black_hole_mass;	// The mass of the black hole.
 	static float			negative_attraction_constant; // Add this line
 	static float			repulsion_constant;           // Add this line
+    static float 			type_diameter; // Add this line
 
 	/**
 	 * @brief Handle the events of the menu.

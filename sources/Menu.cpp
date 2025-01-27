@@ -16,6 +16,8 @@ float			Menu::stars_speed;
 float			Menu::black_hole_mass;
 float           Menu::negative_attraction_constant = 1.0f; // Add this line
 float           Menu::repulsion_constant = 1.0f;           // Add this line
+float 			Menu::type_diameter 	= 50.0f; // Initialize type_diameter
+
 
 void Menu::check_events(const sf::Event& sf_event)
 {
@@ -63,6 +65,8 @@ void Menu::set_default_values()
 	black_hole_mass		= 1000.f;
 	negative_attraction_constant = 1.0f; // Add this line
     repulsion_constant = 1.0f;           // Add this line
+	type_diameter = 50.0f; // Initialize type_diameter
+
 
 	switch (simulation_type)
 	{
@@ -191,8 +195,14 @@ void Menu::display()
 		ImGui::SliderFloat("##Negative_Attraction_Constant", &negative_attraction_constant, -3.0f, 3.0f); // Update range
 		ImGui::Text("Repulsion Constant");
 		ImGui::SliderFloat("##Repulsion_Constant", &repulsion_constant, -3.0f, 3.0f); // Update range
+		ImGui::NewLine();
+
+		ImGui::Text("Type Diameter");
+		ImGui::SliderFloat("##Type_Diameter", &type_diameter, 0.0f, galaxy_diameter); // Add slider for type_diameter
 
 		ImGui::NewLine();
+
+		
 
 		title("Real time settings");
 

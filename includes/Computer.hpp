@@ -33,7 +33,14 @@ public:
 	/**
      * @brief Initializes the types of the stars randomly.
      */
-    static void initialize_star_types(int num_stars);
+    // static void initialize_star_types(int num_stars);
+
+	/**
+	 * @brief Initializes the types of the stars around a dimaeter type
+	 * 
+	 */
+	static void initialize_star_types_and_positions(int num_stars, float type_diameter);
+
 
 	/**
 	 * @brief Add a star in the galaxy setup.

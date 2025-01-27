@@ -30,16 +30,18 @@ dim::Vector3 Computer::random_sphere()
 	return result;
 }
 
-void Computer::initialize_star_types(int num_stars)
-{
-    star_types.resize(num_stars);
-    srand(static_cast<unsigned int>(time(0)));  // Seed the random number generator
 
-    for (int i = 0; i < num_stars; ++i)
-    {
-        star_types[i] = (rand() % 2 == 0) ? 1 : -1;  // Assign 1 for positive, -1 for negative
-    }
-}
+
+// void Computer::initialize_star_types(int num_stars)
+// {
+//     star_types.resize(num_stars);
+//     srand(static_cast<unsigned int>(time(0)));  // Seed the random number generator
+
+//     for (int i = 0; i < num_stars; ++i)
+//     {
+//         star_types[i] = (rand() % 2 == 0) ? 1 : -1;  // Assign 1 for positive, -1 for negative
+//     }
+// }
 
 void Computer::create_galaxy(int i)
 {
@@ -70,44 +72,59 @@ void Computer::create_universe(int i)
 	speeds[i].set_norm((speeds[i].get_norm() / (Simulator::galaxy_diameter / 2.f)) * Simulator::stars_speed);
 }
 
+void Computer::initialize_star_types_and_positions(int num_stars, float type_diameter)
+{
+    star_types.resize(num_stars);
+    positions.resize(num_stars);
+    speeds.resize(num_stars);
+    accelerations.resize(num_stars, dim::Vector4::null);
+
+    srand(static_cast<unsigned int>(time(0)));  // Seed the random number generator
+
+    for (int i = 0; i < num_stars; ++i)
+    {
+        dim::Vector3 position = random_sphere();
+        positions[i] = dim::Vector4(position, 0.0f);
+
+        if (position.get_norm() <= type_diameter / 2.0f)
+        {
+            star_types[i] = 1;  // Positive star inside the type_diameter
+        }
+        else
+        {
+            star_types[i] = -1; // Negative star outside the type_diameter
+        }
+    }
+}
+
 void Computer::init()
 {
-	positions.clear();
-	speeds.clear();
-	accelerations.clear();
-    star_types.clear();  // Add this line
+    positions.clear();
+    speeds.clear();
+    accelerations.clear();
+    star_types.clear();
 
+    initialize_star_types_and_positions(Simulator::nb_stars, Menu::type_diameter);
 
-	positions.resize(Simulator::nb_stars);
-	speeds.resize(Simulator::nb_stars);
-	accelerations.resize(Simulator::nb_stars, dim::Vector4::null);
-    star_types.resize(Simulator::nb_stars);  // Add this line
+    for (int i = 0; i < Simulator::nb_stars; i++)
+    {
+        switch (Simulator::simulation_type)
+        {
+        case SimulationType::Galaxy: create_galaxy(i); break;
+        case SimulationType::Collision: create_collision(i); break;
+        case SimulationType::Universe: create_universe(i); break;
+        default: break;
+        }
+    }
 
-    initialize_star_types(Simulator::nb_stars);  // Add this line
-
-
-	for (int i = 0; i < Simulator::nb_stars; i++)
-	{
-		positions[i] = dim::Vector4(random_sphere(), 0.f);
-
-		switch (Simulator::simulation_type)
-		{
-		case SimulationType::Galaxy: create_galaxy(i); break;
-		case SimulationType::Collision: create_collision(i); break;
-		case SimulationType::Universe: create_universe(i); break;
-		default: break;
-		}
-	}
-
-	positions_buffer = ComputeShader::Buffer(positions, Permissions::All);
-	speeds_buffer = ComputeShader::Buffer(speeds, Permissions::All);
-	accelerations_buffer = ComputeShader::Buffer(accelerations, Permissions::All);
-	step_buffer = ComputeShader::Buffer(Simulator::step, Permissions::Read);
-	smoothing_length_buffer = ComputeShader::Buffer(Simulator::smoothing_length, Permissions::Read);
-	interaction_rate_buffer = ComputeShader::Buffer(Simulator::interaction_rate, Permissions::Read);
-	black_hole_mass_buffer = ComputeShader::Buffer(Simulator::black_hole_mass, Permissions::Read);
-	types_buffer = ComputeShader::Buffer(star_types, Permissions::Read);  // Add this line
-
+    positions_buffer = ComputeShader::Buffer(positions, Permissions::All);
+    speeds_buffer = ComputeShader::Buffer(speeds, Permissions::All);
+    accelerations_buffer = ComputeShader::Buffer(accelerations, Permissions::All);
+    step_buffer = ComputeShader::Buffer(Simulator::step, Permissions::Read);
+    smoothing_length_buffer = ComputeShader::Buffer(Simulator::smoothing_length, Permissions::Read);
+    interaction_rate_buffer = ComputeShader::Buffer(Simulator::interaction_rate, Permissions::Read);
+    black_hole_mass_buffer = ComputeShader::Buffer(Simulator::black_hole_mass, Permissions::Read);
+    types_buffer = ComputeShader::Buffer(star_types, Permissions::Read);
 }
 
 void Computer::compute()
