@@ -14,6 +14,8 @@ float			Menu::galaxy_thickness;
 float			Menu::galaxies_distance;
 float			Menu::stars_speed;
 float			Menu::black_hole_mass;
+float           Menu::negative_attraction_constant = 1.0f; // Add this line
+float           Menu::repulsion_constant = 1.0f;           // Add this line
 
 void Menu::check_events(const sf::Event& sf_event)
 {
@@ -59,6 +61,8 @@ void Menu::set_default_values()
 	smoothing_length	= 1.f;
 	galaxies_distance	= 75.f;
 	black_hole_mass		= 1000.f;
+	negative_attraction_constant = 1.0f; // Add this line
+    repulsion_constant = 1.0f;           // Add this line
 
 	switch (simulation_type)
 	{
@@ -180,6 +184,13 @@ void Menu::display()
 			set_default_values();
 			Simulator::reload = true;
 		}
+		ImGui::NewLine();
+
+		// Add UI elements for the constants
+		ImGui::Text("Negative Attraction Constant");
+		ImGui::SliderFloat("##Negative_Attraction_Constant", &negative_attraction_constant, -3.0f, 3.0f); // Update range
+		ImGui::Text("Repulsion Constant");
+		ImGui::SliderFloat("##Repulsion_Constant", &repulsion_constant, -3.0f, 3.0f); // Update range
 
 		ImGui::NewLine();
 

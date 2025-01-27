@@ -1,3 +1,7 @@
+// Define constants for attraction and repulsion
+#define NEGATIVE_ATTRACTION_CONSTANT 1.f
+#define REPULSION_CONSTANT 1.f
+
 // Convert a 4D vector to a 3D vector.
 float3 convert_3(float4 vector)
 {
@@ -22,24 +26,37 @@ float distance_2(float3 point_1, float3 point_2)
 	return norm_2(point_2 - point_1);
 }
 
-// Handle the interactions betweens the stars.
+// Handle the interactions between the stars.
 __kernel void interactions(__global float4* positions, __global float4* accelerations,
-	__global float* interaction_rate, __global float* smoothing_length, __global float* black_hole_mass)
+    __global float* interaction_rate, __global float* smoothing_length, __global float* black_hole_mass, __global int* types)
 {
-	int index = get_global_id(0);
-	float3 acc = (float3)(0, 0, 0);
+    int index = get_global_id(0);
+    float3 acc = (float3)(0, 0, 0);
+    int type = types[index];
 
-	for (int i = 0; i < *interaction_rate * get_global_size(0); i++)
-	{
-		if (i != index)
-		{
-			float3 vector = convert_3(positions[i]) - convert_3(positions[index]);
-			acc += (normalize(vector) / (norm_2(vector) + *smoothing_length)) / *interaction_rate;
-		}
-	}
+    for (int i = 0; i < *interaction_rate * get_global_size(0); i++)
+    {
+        if (i != index)
+        {
+            float3 vector = convert_3(positions[i]) - convert_3(positions[index]);
+            int other_type = types[i];
+            float sign;
 
-	acc += (*black_hole_mass * normalize(-convert_3(positions[index]))) / (norm_2(convert_3(positions[index])) + *smoothing_length);
-	accelerations[index] = convert_4(acc);
+            if (type == other_type)
+            {
+                sign = (type == -1) ? NEGATIVE_ATTRACTION_CONSTANT : 1.0f; // Use NEGATIVE_ATTRACTION_CONSTANT for negative stars
+            }
+            else
+            {
+                sign = -REPULSION_CONSTANT; // Use REPULSION_CONSTANT for different types repulsing each other
+            }
+
+            acc += sign * (normalize(vector) / (norm_2(vector) + *smoothing_length)) / *interaction_rate;
+        }
+    }
+
+    acc += (*black_hole_mass * normalize(-convert_3(positions[index]))) / (norm_2(convert_3(positions[index])) + *smoothing_length);
+    accelerations[index] = convert_4(acc);
 }
 
 // Make the integrations to update the position of the stars.

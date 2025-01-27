@@ -1,3 +1,28 @@
+```
+./build/Galaxy_simulation 
+```
+to run the built
+
+```
+bash unix_run.sh
+```
+to built
+
+error 0: install libglew-dev
+
+error 1 : https://stackoverflow.com/questions/56858213/how-to-create-nvidia-opencl-project/57017982#57017982
+
+https://github.com/ProjectPhysX/OpenCL-Wrapper/tree/master/src/OpenCL and put the file in the incldes with good folders
+
+
+
+error 2: that was useful
+```
+sudo apt-get install freeglut3-dev
+```
+from https://askubuntu.com/questions/96087/how-to-install-opengl-glut-libraries
+
+
 # 🌌 Galaxy simulation
 
 ![Release](https://img.shields.io/badge/Release-v4.0-blueviolet)

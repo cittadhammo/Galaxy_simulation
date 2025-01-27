@@ -31,8 +31,10 @@ public:
 	static float			galaxy_diameter;	// The diameter of the galaxy.
 	static float			galaxy_thickness;	// The thickness of the galaxy.
 	static float			galaxies_distance;	// The distance between the galaxies.
-	static float			stars_speed;		// The initial speed of the stars.
+	static float			stars_speed;		// The speed of the stars.
 	static float			black_hole_mass;	// The mass of the black hole.
+	static float			negative_attraction_constant; // Add this line
+	static float			repulsion_constant;           // Add this line
 
 	/**
 	 * @brief Handle the events of the menu.
