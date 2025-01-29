@@ -1,3 +1,5 @@
+# Building on Linux
+
 ```
 ./build/Galaxy_simulation 
 ```
@@ -21,6 +23,11 @@ error 2: that was useful
 sudo apt-get install freeglut3-dev
 ```
 from https://askubuntu.com/questions/96087/how-to-install-opengl-glut-libraries
+
+## Two differents simulation modifications 
+ 
+- Add different stars type at random in proportion
+- Add different stars type from a certain diameter (The current modification) 
 
 
 # 🌌 Galaxy simulation
