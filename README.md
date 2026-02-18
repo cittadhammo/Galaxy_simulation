@@ -35,6 +35,7 @@ This repository contains the source code of an n-body type simulation using GPU 
 	* [⚙️ Janus + Performance Update](#%EF%B8%8F-janus--performance-update)
 	* [🧪 Batch Experiment Workflow](#-batch-experiment-workflow)
 	* [✅ Validate Optimized Runs](#-validate-optimized-runs)
+	* [☁️ Cloud VM](#%EF%B8%8F-cloud-vm)
 	* [🧩 Troubleshooting](#-troubleshooting)
 * **[📝 Changes](#-changes)**
 * **[🧪 Simulation variants](#-simulation-variants)**
@@ -308,6 +309,17 @@ Notes:
 
 * Batch mode still needs an OpenGL/X11 context on Linux.
 * For server VMs without display, use a virtual display (for example `xvfb`) or add a future true headless mode.
+
+## ☁️ Cloud VM
+
+For remote runs when your local machine is limited:
+
+* setup VM dependencies + build: `bash cloud/setup_ubuntu_vm.sh`
+* run interactive mode over VNC: `VNC_PASSWORD='change_me' bash cloud/start_live_vnc.sh`
+* run headless batch: `bash cloud/run_headless_batch.sh --batch-config batch_configs/example.batchcfg`
+* run queued batch files: `bash cloud/process_batch_queue.sh`
+
+Full guide: [`cloud/README.md`](cloud/README.md)
 
 ## 📝 Changes
 
