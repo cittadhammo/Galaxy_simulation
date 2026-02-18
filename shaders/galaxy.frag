@@ -9,14 +9,13 @@ out vec4 frag_color;
 void main()
 {
     float brightness = v_brightness / 5.0;
-    float brightness2 = v_brightness / 1.0;
 
     if (v_starType > 0)
     {
-        frag_color = vec4(brightness, 0.0, 0.0, 1.0); // gives blue stars for positive stars
+        frag_color = vec4(0.0, 0.0, brightness, 1.0); // regular mass (positive): blue
     }
     else
     {
-        frag_color = vec4(1., brightness, 0.0, 1.0); // gives brigther blue stars for positive stars
+        frag_color = vec4(brightness, 0.0, 0.0, 1.0); // negative mass: red
     }
 }

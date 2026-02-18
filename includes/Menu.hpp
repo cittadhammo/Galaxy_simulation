@@ -14,6 +14,16 @@ enum class SimulationType : int
 };
 
 /**
+ * @brief The initial distribution of positive/negative matter.
+ */
+enum class MatterDistribution : int
+{
+	CoreHalo	= 0,	// Positive core and negative halo (radius threshold).
+	RandomMix	= 1,	// Random mix based on positive ratio.
+	SplitX		= 2		// Split space in two halves along the X axis.
+};
+
+/**
  * @brief The window to edit the settings of the simulation.
  */
 class Menu
@@ -33,9 +43,12 @@ public:
 	static float			galaxies_distance;	// The distance between the galaxies.
 	static float			stars_speed;		// The speed of the stars.
 	static float			black_hole_mass;	// The mass of the black hole.
-	static float			negative_attraction_constant; // Add this line
-	static float			repulsion_constant;           // Add this line
-    static float 			type_diameter; // Add this line
+	static float			negative_attraction_constant;	// Multiplier for negative-negative attraction.
+	static float			repulsion_constant;				// Multiplier for opposite-type interaction.
+	static float			type_diameter;					// Diameter used by core/halo matter distribution.
+	static MatterDistribution matter_distribution;		// Initial positive/negative matter distribution model.
+	static float			positive_ratio;					// Positive matter ratio for random mix.
+	static float			core_extra_negative_density;	// Extra negative density injected inside the core.
 
 	/**
 	 * @brief Handle the events of the menu.

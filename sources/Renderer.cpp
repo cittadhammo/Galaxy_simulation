@@ -24,7 +24,7 @@ void Renderer::init_vbo()
     GLsizeiptr speeds_size = Computer::speeds.size() * sizeof(dim::Vector4);
     GLsizeiptr types_size = Computer::star_types.size() * sizeof(int);
 
-    // Allocate buffer data for positions, speeds, and star types
+    // Allocate one packed buffer: positions, speeds, star types.
     glBufferData(GL_ARRAY_BUFFER, positions_size + speeds_size + types_size, NULL, GL_DYNAMIC_DRAW);
 
     // Update positions
@@ -52,7 +52,7 @@ void Renderer::init_vbo()
     glEnableVertexAttribArray(speeds);
 
     GLint star_types = glGetAttribLocation(dim::Shader::get("galaxy").get_id(), "a_starType");
-    glVertexAttribPointer(star_types, 1, GL_INT, GL_FALSE, sizeof(int), reinterpret_cast<GLvoid*>(positions_size + speeds_size));
+    glVertexAttribIPointer(star_types, 1, GL_INT, sizeof(int), reinterpret_cast<GLvoid*>(positions_size + speeds_size));
     glEnableVertexAttribArray(star_types);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -65,19 +65,12 @@ void Renderer::update_vbo()
 
     GLsizeiptr positions_size = Computer::positions.size() * sizeof(dim::Vector4);
     GLsizeiptr speeds_size = Computer::speeds.size() * sizeof(dim::Vector4);
-    GLsizeiptr types_size = Computer::star_types.size() * sizeof(int);
-
-    // Allocate buffer data for positions, speeds, and star types
-    glBufferData(GL_ARRAY_BUFFER, positions_size + speeds_size + types_size, NULL, GL_DYNAMIC_DRAW);
 
     // Update positions
     glBufferSubData(GL_ARRAY_BUFFER, 0, positions_size, Computer::positions.data());
 
     // Update speeds
     glBufferSubData(GL_ARRAY_BUFFER, positions_size, speeds_size, Computer::speeds.data());
-
-    // Update star types
-    glBufferSubData(GL_ARRAY_BUFFER, positions_size + speeds_size, types_size, Computer::star_types.data());
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
@@ -109,8 +102,6 @@ void Renderer::init()
 	galaxy_fbo_2.create(dim::Window::get_size(), dim::Texture::Filtering::Linear, dim::Texture::Warpping::MirroredRepeat, dim::Texture::Type::RGB_16f);
 	blur_fbo_1.create(dim::Window::get_size(), dim::Texture::Filtering::Linear, dim::Texture::Warpping::MirroredRepeat, dim::Texture::Type::RGB_16f);
 	blur_fbo_2.create(dim::Window::get_size(), dim::Texture::Filtering::Linear, dim::Texture::Warpping::MirroredRepeat, dim::Texture::Type::RGB_16f);
-
-	update_vbo();
 }
 
 void Renderer::check_events(const sf::Event& sf_event)

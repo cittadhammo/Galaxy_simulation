@@ -1,4 +1,7 @@
 #include "Simulator.hpp"
+#include <iostream>
+#include <sstream>
+#include <iomanip>
 
 std::atomic<bool>	Simulator::computation_done;
 std::atomic<bool>	Simulator::reload;
@@ -48,10 +51,61 @@ void Simulator::restart()
 
 	Computer::init();
 	Renderer::init();
+	print_configuration();
 
 	computation_done = false;
 	waiting = false;
 	reload = false;
+}
+
+void Simulator::print_configuration()
+{
+	std::cout << configuration_line() << std::endl;
+}
+
+std::string Simulator::configuration_line()
+{
+	const char* simulation_type_name = "Galaxy";
+	switch (Menu::simulation_type)
+	{
+	case SimulationType::Galaxy: simulation_type_name = "Galaxy"; break;
+	case SimulationType::Collision: simulation_type_name = "Collision"; break;
+	case SimulationType::Universe: simulation_type_name = "Universe"; break;
+	}
+
+	const char* matter_distribution_name = "CoreHalo";
+	switch (Menu::matter_distribution)
+	{
+	case MatterDistribution::CoreHalo: matter_distribution_name = "CoreHalo"; break;
+	case MatterDistribution::RandomMix: matter_distribution_name = "RandomMix"; break;
+	case MatterDistribution::SplitX: matter_distribution_name = "SplitX"; break;
+	}
+
+	std::ostringstream out;
+	out << std::fixed << std::setprecision(6);
+	out
+		<< "SIMCFG "
+		<< "simulation_type=" << simulation_type_name << " "
+		<< "step=" << Menu::step << " "
+		<< "smoothing_length=" << Menu::smoothing_length << " "
+		<< "interaction_rate=" << Menu::interaction_rate << " "
+		<< "nb_stars=" << Menu::nb_stars << " "
+		<< "galaxy_diameter=" << Menu::galaxy_diameter << " "
+		<< "galaxy_thickness=" << Menu::galaxy_thickness << " "
+		<< "galaxies_distance=" << Menu::galaxies_distance << " "
+		<< "stars_speed=" << Menu::stars_speed << " "
+		<< "black_hole_mass=" << Menu::black_hole_mass << " "
+		<< "negative_attraction_constant=" << Menu::negative_attraction_constant << " "
+		<< "repulsion_constant=" << Menu::repulsion_constant << " "
+		<< "matter_distribution=" << matter_distribution_name << " "
+		<< "type_diameter=" << Menu::type_diameter << " "
+		<< "positive_ratio=" << Menu::positive_ratio << " "
+		<< "core_extra_negative_density=" << Menu::core_extra_negative_density << " "
+		<< "batch_steps=2000 "
+		<< "snapshots=4 "
+		<< "output_dir=outputs";
+
+	return out.str();
 }
 
 void Simulator::menu_update()

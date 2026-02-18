@@ -32,7 +32,11 @@ This repository contains the source code of an n-body type simulation using GPU 
 	* [📦 Dependencies](#-dependencies)
 	* [▶️ Build](#%EF%B8%8F-build)
 	* [🚀 Run](#-run)
+	* [⚙️ Janus + Performance Update](#%EF%B8%8F-janus--performance-update)
+	* [🧪 Batch Experiment Workflow](#-batch-experiment-workflow)
+	* [✅ Validate Optimized Runs](#-validate-optimized-runs)
 	* [🧩 Troubleshooting](#-troubleshooting)
+* **[📝 Changes](#-changes)**
 * **[🧪 Simulation variants](#-simulation-variants)**
 * **[🗓️ Releases](#%EF%B8%8F-releases)**
 * **[🧪 Tests](#-tests)**
@@ -103,6 +107,33 @@ sudo apt-get install -y \
   ocl-icd-opencl-dev
 ```
 
+On Arch Linux:
+
+```bash
+sudo pacman -S --needed \
+  base-devel \
+  cmake \
+  glew \
+  freeglut \
+  opencl-headers \
+  ocl-icd \
+  clinfo
+```
+
+Install at least one OpenCL implementation:
+
+CPU fallback:
+
+```bash
+sudo pacman -S --needed pocl
+```
+
+NVIDIA GPU:
+
+```bash
+sudo pacman -S --needed opencl-nvidia
+```
+
 ## ▶️ Build
 
 If you clone for the first time:
@@ -124,6 +155,141 @@ bash unix_run.sh
 ./build/Galaxy_simulation
 ```
 
+Shortcut:
+
+```bash
+bash run_sim.sh
+```
+
+Batch run (compute N steps, then export final snapshots from multiple angles):
+
+```bash
+./build/Galaxy_simulation --batch-steps 2000 --snapshots 4 --output-dir outputs
+```
+
+Shortcut:
+
+```bash
+bash run_batch.sh 2000 4 outputs
+```
+
+Batch file (each line = one simulation job):
+
+```bash
+bash run_batch.sh --batch-config batch_configs/example.batchcfg
+```
+
+## ⚙️ Janus + Performance Update
+
+This branch includes:
+
+* Janus star typing with explicit matter distributions:
+  * `Core + halo` (positive center, negative outer region)
+  * `Random mix` (positive ratio slider)
+  * `Split on X` (two spatial halves)
+* `Core + halo` negative density control:
+  * `Extra negative density inside core` in `[0, 1]`
+  * `0`: core fully positive
+  * `1`: core fully negative
+  * in `Core + halo` mode: halo stars are always negative
+* Janus force multipliers:
+  * `Negative Attraction Constant`
+  * `Repulsion Constant`
+* Color convention:
+  * Positive/regular mass: **blue**
+  * Negative mass: **red**
+* Performance optimizations:
+  * Reuse OpenCL command queue
+  * Reuse scalar OpenCL buffers and update them in-place
+  * Remove unnecessary per-frame acceleration readback
+  * Avoid per-frame OpenGL VBO reallocation
+  * Upload star type data only at initialization/restart
+
+## 🧪 Batch Experiment Workflow
+
+Use batch mode when you want to simulate many frames and only inspect final results:
+
+```bash
+./build/Galaxy_simulation --batch-steps 10000 --snapshots 6 --output-dir outputs/run_001
+```
+
+Run many jobs from one file (line-by-line):
+
+```bash
+./build/Galaxy_simulation --batch-config batch_configs/example.batchcfg
+```
+
+Batch file format:
+
+* each non-comment line is one job
+* each line is `key=value` tokens
+* lines can start with `SIMCFG`
+* recommended keys per line:
+  * simulation: `simulation_type step smoothing_length interaction_rate nb_stars galaxy_diameter galaxy_thickness galaxies_distance stars_speed black_hole_mass negative_attraction_constant repulsion_constant matter_distribution type_diameter positive_ratio core_extra_negative_density`
+  * batch: `batch_steps snapshots output_dir`
+
+Recommended workflow:
+
+1. Start interactive mode (`./build/Galaxy_simulation`) and tune settings until the setup is close to your target physics.
+2. Click `Restart` after changing any setting under `Applies after restart`.
+3. In the menu, use `Batch config export`:
+   * set output file path (default: `batch_configs/user.batchcfg`)
+   * click `Append current SIMCFG to file`
+4. Repeat for each setup you want to queue.
+5. Run the whole file with:
+   ```bash
+   bash run_batch.sh --batch-config batch_configs/user.batchcfg
+   ```
+6. Compare the exported snapshots across runs.
+
+Choosing initial parameters:
+
+* `Core + halo`:
+  * `Type Diameter` defines the positive core sphere.
+  * outside that sphere is halo and always negative.
+  * `Extra negative density inside core` injects negative stars into the core (`0` to `1`).
+  * start around `type_diameter = 0.4 * galaxy_diameter` and extra density `0.1`, then sweep.
+* `Random mix`:
+  * use `Positive Ratio` (for example `0.2`, `0.5`, `0.8`) to test segregation behavior.
+* `Split on X`:
+  * good for interface-instability tests.
+* For reduced-particle experiments:
+  * decrease `nb_stars`
+  * compensate dynamics with `Negative Attraction Constant` and `Repulsion Constant`
+  * keep `step` and `smoothing_length` stable while you tune force multipliers.
+
+## ✅ Validate Optimized Runs
+
+Before launching cloud runs, validate local behavior:
+
+1. Build and run:
+   ```bash
+   bash unix_run.sh
+   ./build/Galaxy_simulation
+   ```
+2. Confirm expected visuals:
+   * positive stars are blue
+   * negative stars are red
+3. Confirm initialization counts in terminal logs:
+   * `[Init] stars+=... stars-=... core=... halo=...`
+   * this lets you verify the real positive/negative assignment for each restart
+   * a copy/paste one-line config is printed as:
+     `SIMCFG key=value ...`
+4. Confirm batch export:
+   ```bash
+   ./build/Galaxy_simulation --batch-steps 2000 --snapshots 4 --output-dir outputs/check
+   ```
+5. Compare timing at same parameters before/after optimization.
+
+Notes:
+
+* Batch mode still needs an OpenGL/X11 context on Linux.
+* For server VMs without display, use a virtual display (for example `xvfb`) or add a future true headless mode.
+
+## 📝 Changes
+
+Detailed change log: see [`CHANGE.md`](CHANGE.md).
+
 ## 🧩 Troubleshooting
 
 * `Could not find SFML`: make sure submodules are present (`git submodule update --init --recursive`).
@@ -140,6 +306,10 @@ bash unix_run.sh
 
 * Add different star types at random in proportion.
 * Add different star types from a diameter threshold (current modification).
+* Select matter distribution in-app:
+  * `Core + halo`: positive core, negative halo
+  * `Random mix`: random positive/negative based on ratio
+  * `Split on X`: one half positive, one half negative
 
 <br/>
 

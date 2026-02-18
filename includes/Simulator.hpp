@@ -8,6 +8,7 @@
 #include <mutex>
 #include <thread>
 #include <atomic>
+#include <string>
 
 /**
  * @brief A static class representing the simulation.
@@ -39,6 +40,18 @@ public:
 	 * @brief Restart the simulation.
 	 */
 	static void restart();
+
+	/**
+	 * @brief Print all simulation parameters in one line.
+	 */
+	static void print_configuration();
+
+	/**
+	 * @brief Build all simulation parameters in one line.
+	 *
+	 * @return the configuration line
+	 */
+	static std::string configuration_line();
 
 	/**
 	 * @brief Update the simulation settings from the menu.

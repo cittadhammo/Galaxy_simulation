@@ -22,6 +22,8 @@ public:
 	static cl::Buffer					interaction_rate_buffer;	// The OpenCL buffer of the interaction rate.
 	static cl::Buffer					black_hole_mass_buffer;		// The OpenCL buffer of the mass of the black hole.
 	static cl::Buffer					types_buffer;				// The OpenCL buffer of the types of the stars.
+	static cl::Buffer					negative_attraction_constant_buffer;	// The OpenCL buffer of the negative attraction constant.
+	static cl::Buffer					repulsion_constant_buffer;	// The OpenCL buffer of the repulsion constant.
 	
 	/**
 	 * @brief Gives a point randomly placed in a sphere of the diameter of the galaxy.
@@ -31,12 +33,7 @@ public:
 	static dim::Vector3 random_sphere();
 
 	/**
-     * @brief Initializes the types of the stars randomly.
-     */
-    // static void initialize_star_types(int num_stars);
-
-	/**
-	 * @brief Initializes the types of the stars around a dimaeter type
+	 * @brief Initializes star positions and matter types.
 	 * 
 	 */
 	static void initialize_star_types_and_positions(int num_stars, float type_diameter);
