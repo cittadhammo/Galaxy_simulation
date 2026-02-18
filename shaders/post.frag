@@ -14,6 +14,6 @@ void main()
     vec3 stars = galaxy_data.rgb;
     vec3 blur = texture(u_blur, v_texcoord).rgb;
     // Boost blue-channel bloom so positive stars get a glow comparable to negatives.
-    vec3 glow = vec3(0.20 * blur.r, 0.20 * blur.g, 0.34 * blur.b);
+    vec3 glow = vec3(0.20 * blur.r, 0.20 * blur.g, 0.22 * blur.b);
     frag_color = vec4(0.7 * (stars + glow), 1.0);
 }

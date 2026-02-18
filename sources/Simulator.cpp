@@ -2,6 +2,7 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <algorithm>
 
 std::atomic<bool>	Simulator::computation_done;
 std::atomic<bool>	Simulator::reload;
@@ -16,15 +17,14 @@ float				Simulator::galaxy_thickness;
 float				Simulator::galaxies_distance;
 float				Simulator::stars_speed;
 float				Simulator::black_hole_mass;
+Simulator::CameraView Simulator::camera_view = Simulator::CameraView::Isometric;
 
 void Simulator::init()
 {
 	dim::PerspectiveCamera cam(45.f, 1.f, 10000.f);
 	cam.set_position(dim::Vector3(0.f, 0.f, 130.f));
-	dim::Vector3 camera_pos = cam.get_position();
-	camera_pos.set_phi(dim::pi / 3.f);
-	cam.set_position(camera_pos);
 	dim::Window::set_camera(cam);
+	apply_camera_view();
 	dim::Window::set_controller(dim::OrbitController(dim::Vector3::null, dim::OrbitController::default_sensitivity, 2.f));
 
 	dim::Shader::add("galaxy", "shaders/galaxy.vert", "shaders/galaxy.frag");
@@ -101,6 +101,7 @@ std::string Simulator::configuration_line()
 		<< "type_diameter=" << Menu::type_diameter << " "
 		<< "positive_ratio=" << Menu::positive_ratio << " "
 		<< "core_extra_negative_density=" << Menu::core_extra_negative_density << " "
+		<< "camera_view=" << (camera_view == CameraView::Top ? "top" : "isometric") << " "
 		<< "batch_steps=2000 "
 		<< "snapshots=4 "
 		<< "output_dir=outputs";
@@ -159,4 +160,31 @@ void Simulator::draw()
 {
 	Renderer::clear();
 	Renderer::draw();
+}
+
+void Simulator::apply_camera_view()
+{
+	dim::Camera& camera = dim::Window::get_camera();
+	const float radius = std::max(1.0f, camera.get_position().get_norm());
+
+	switch (camera_view)
+	{
+	case CameraView::Top:
+	{
+		const dim::Vector3 position(0.0f, radius, 0.001f);
+		camera.set_position(position);
+		camera.set_direction(-position);
+		break;
+	}
+
+	case CameraView::Isometric:
+	default:
+	{
+		dim::Vector3 position(0.f, 0.f, radius);
+		position.set_phi(dim::pi / 3.f);
+		camera.set_position(position);
+		camera.set_direction(-position);
+		break;
+	}
+	}
 }

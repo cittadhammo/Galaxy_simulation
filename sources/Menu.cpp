@@ -201,6 +201,13 @@ void Menu::display()
 		}
 		ImGui::NewLine();
 
+		Simulator::CameraView previous_camera_view = Simulator::camera_view;
+		ImGui::Text("Camera view");
+		ImGui::Combo("##camera_view", reinterpret_cast<int*>(&Simulator::camera_view), "Isometric\0Top");
+		if (Simulator::camera_view != previous_camera_view)
+			Simulator::apply_camera_view();
+		ImGui::NewLine();
+
 		// Janus force multipliers (real-time).
 		ImGui::Text("Negative Attraction Constant");
 		ImGui::SliderFloat("##Negative_Attraction_Constant", &negative_attraction_constant, -3.0f, 3.0f);

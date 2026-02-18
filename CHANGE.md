@@ -22,9 +22,14 @@
   * `run_sim.sh`
   * `run_batch.sh`
   * `run_batch.sh --batch-config batch_configs/example.batchcfg`
+  * `run_batch.sh` automatically uses root `batch_jobs.cfg` when present
 * In-app batch export UI:
   * set config output path
   * append current `SIMCFG` line directly from the menu
+* Root-level batch job template file: `batch_jobs.cfg`
+* Camera preset in config lines:
+  * `camera_view=isometric|top`
+* Root-level interactive startup config file: `simulation.cfg`
 
 ### Changed
 

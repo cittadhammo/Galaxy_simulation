@@ -12,7 +12,9 @@ void main()
 
     if (v_starType > 0)
     {
-        frag_color = vec4(0.0, 0.0, brightness, 1.0); // regular mass (positive): blue
+        // Blue stars: bright blue compact core (not white) + softer blue body.
+        float core = 0.36 * brightness;
+        frag_color = vec4(0.0, 0.06 * core, 1.10 * brightness + 1.45 * core, 1.0); // regular mass (positive): blue
     }
     else
     {

@@ -108,6 +108,13 @@ static bool parse_matter_distribution(const std::string& text, MatterDistributio
 	return false;
 }
 
+static bool parse_camera_view(const std::string& text, Simulator::CameraView& value)
+{
+	if (text == "isometric" || text == "iso" || text == "0") { value = Simulator::CameraView::Isometric; return true; }
+	if (text == "top" || text == "1") { value = Simulator::CameraView::Top; return true; }
+	return false;
+}
+
 using ConfigKV = std::unordered_map<std::string, std::string>;
 
 static ConfigKV parse_config_line(const std::string& raw)
@@ -177,6 +184,12 @@ static bool apply_config_kv(const ConfigKV& kv, BatchOptions& batch, bool* outpu
 		MatterDistribution distribution = Menu::matter_distribution;
 		if (parse_matter_distribution(*v, distribution))
 			Menu::matter_distribution = distribution;
+	}
+	if (const std::string* v = get("camera_view"))
+	{
+		Simulator::CameraView view = Simulator::camera_view;
+		if (parse_camera_view(*v, view))
+			Simulator::camera_view = view;
 	}
 
 	auto set_float = [&](const char* key, float& target)
@@ -322,6 +335,7 @@ int main(int argc, char** argv)
 		{
 			apply_config_kv(jobs.front(), mutable_batch_options);
 			Simulator::restart();
+			Simulator::apply_camera_view();
 		}
 	}
 
@@ -352,6 +366,7 @@ int main(int argc, char** argv)
 
 			std::cout << "[Batch] Job " << (i + 1) << "/" << jobs.size() << std::endl;
 			Simulator::restart();
+			Simulator::apply_camera_view();
 			run_batch_mode(job_options, false);
 		}
 

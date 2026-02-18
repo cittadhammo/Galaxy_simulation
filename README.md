@@ -161,6 +161,12 @@ Shortcut:
 bash run_sim.sh
 ```
 
+Default root config for normal (interactive) simulation:
+
+* `simulation.cfg`
+* when you run `bash run_sim.sh` with no extra arguments, this file is loaded automatically
+* set `camera_view=top` in `simulation.cfg` for top-down startup
+
 Batch run (compute N steps, then export final snapshots from multiple angles):
 
 ```bash
@@ -178,6 +184,14 @@ Batch file (each line = one simulation job):
 ```bash
 bash run_batch.sh --batch-config batch_configs/example.batchcfg
 ```
+
+Default root config:
+
+```bash
+bash run_batch.sh
+```
+
+If `batch_jobs.cfg` exists at repository root, `run_batch.sh` uses it automatically.
 
 ## ⚙️ Janus + Performance Update
 
@@ -219,14 +233,23 @@ Run many jobs from one file (line-by-line):
 ./build/Galaxy_simulation --batch-config batch_configs/example.batchcfg
 ```
 
+Root-level default batch file:
+
+```bash
+./build/Galaxy_simulation --batch-config batch_jobs.cfg
+```
+
 Batch file format:
 
 * each non-comment line is one job
 * each line is `key=value` tokens
 * lines can start with `SIMCFG`
 * recommended keys per line:
-  * simulation: `simulation_type step smoothing_length interaction_rate nb_stars galaxy_diameter galaxy_thickness galaxies_distance stars_speed black_hole_mass negative_attraction_constant repulsion_constant matter_distribution type_diameter positive_ratio core_extra_negative_density`
+  * simulation: `simulation_type step smoothing_length interaction_rate nb_stars galaxy_diameter galaxy_thickness galaxies_distance stars_speed black_hole_mass negative_attraction_constant repulsion_constant matter_distribution type_diameter positive_ratio core_extra_negative_density camera_view`
   * batch: `batch_steps snapshots output_dir`
+* `camera_view` values:
+  * `isometric` (default)
+  * `top` (top-down start view)
 
 Recommended workflow:
 

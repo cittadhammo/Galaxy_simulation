@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEFAULT_BATCH_CONFIG="${ROOT_DIR}/batch_jobs.cfg"
 
 if [[ "${1:-}" == "--batch-config" && -n "${2:-}" ]]; then
   BATCH_CONFIG="${2}"
@@ -10,7 +11,11 @@ if [[ "${1:-}" == "--batch-config" && -n "${2:-}" ]]; then
   SNAPSHOTS="${2:-4}"
   OUT_DIR="${3:-outputs}"
 else
-  BATCH_CONFIG=""
+  if [[ -f "${DEFAULT_BATCH_CONFIG}" ]]; then
+    BATCH_CONFIG="${DEFAULT_BATCH_CONFIG}"
+  else
+    BATCH_CONFIG=""
+  fi
   STEPS="${1:-2000}"
   SNAPSHOTS="${2:-4}"
   OUT_DIR="${3:-outputs}"
