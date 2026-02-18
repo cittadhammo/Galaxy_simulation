@@ -1,35 +1,3 @@
-# Building on Linux
-
-```
-./build/Galaxy_simulation 
-```
-to run the built
-
-```
-bash unix_run.sh
-```
-to built
-
-error 0: install libglew-dev
-
-error 1 : https://stackoverflow.com/questions/56858213/how-to-create-nvidia-opencl-project/57017982#57017982
-
-https://github.com/ProjectPhysX/OpenCL-Wrapper/tree/master/src/OpenCL and put the file in the incldes with good folders
-
-
-
-error 2: that was useful
-```
-sudo apt-get install freeglut3-dev
-```
-from https://askubuntu.com/questions/96087/how-to-install-opengl-glut-libraries
-
-## Two differents simulation modifications 
- 
-- Add different stars type at random in proportion
-- Add different stars type from a certain diameter (The current modification) 
-
-
 # 🌌 Galaxy simulation
 
 ![Release](https://img.shields.io/badge/Release-v4.0-blueviolet)
@@ -59,9 +27,13 @@ This repository contains the source code of an n-body type simulation using GPU 
 * **[📋 Summary](#-summary)**
 * **[🎥 Video](#-video)**
 * **[✨ Features](#-features)**
+* **[🐧 Build on Linux](#-build-on-linux)**
 * **[🛠️ Install](#%EF%B8%8F-install)**
-	* [🦴 Skeleton project install](#-skeleton-project-install)
-	* [📦 Additionnal dependencies](#-additionnal-dependencies)
+	* [📦 Dependencies](#-dependencies)
+	* [▶️ Build](#%EF%B8%8F-build)
+	* [🚀 Run](#-run)
+	* [🧩 Troubleshooting](#-troubleshooting)
+* **[🧪 Simulation variants](#-simulation-variants)**
 * **[🗓️ Releases](#%EF%B8%8F-releases)**
 * **[🧪 Tests](#-tests)**
 * **[🙏 Credits](#-credits)**
@@ -100,17 +72,74 @@ Here is a video explaining how the algorithm works : [<u>**Simuler 1 000 000 de 
 
 <br/>
 
-# 🛠️ Install
+# 🐧 Build on Linux
 
-## 🦴 Skeleton project install
+```bash
+bash unix_run.sh
+```
 
-This repository is based on my [**Graphics skeleton project**](https://github.com/angeluriot/Graphics_skeleton), so go see its [**install**](https://github.com/angeluriot/Graphics_skeleton#install) part first.
+This script:
+
+* initializes/upgrades git submodules (`--init --recursive`)
+* configures CMake with `Unix Makefiles`
+* uses the OpenCL include/library shipped in this repository
+* builds the executable in `./build`
 
 <br/>
 
-## 📦 Additionnal dependencies
+# 🛠️ Install
 
-Then, you will also need the [**OpenCL**](https://www.khronos.org/opencl/) library.
+## 📦 Dependencies
+
+On Debian/Ubuntu:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y \
+  build-essential \
+  cmake \
+  libglew-dev \
+  freeglut3-dev \
+  ocl-icd-opencl-dev
+```
+
+## ▶️ Build
+
+If you clone for the first time:
+
+```bash
+git clone --recurse-submodules https://github.com/angeluriot/Galaxy_simulation.git
+cd Galaxy_simulation
+```
+
+Then build:
+
+```bash
+bash unix_run.sh
+```
+
+## 🚀 Run
+
+```bash
+./build/Galaxy_simulation
+```
+
+## 🧩 Troubleshooting
+
+* `Could not find SFML`: make sure submodules are present (`git submodule update --init --recursive`).
+* `Could NOT find OpenCL`: use `bash unix_run.sh` (it passes the required OpenCL paths).
+* `No platforms found!`: OpenCL loader is present but no OpenCL driver ICD is installed.
+  On Arch Linux:
+  `sudo pacman -S --needed pocl` (CPU fallback) or install the NVIDIA-matching OpenCL package (for example `opencl-nvidia-580xx` for 580xx drivers).
+  Verify with `clinfo`: `Number of platforms` must be at least `1`.
+* `Failed to open X11 display`: run from a desktop session with a valid `DISPLAY` variable.
+
+<br/>
+
+# 🧪 Simulation variants
+
+* Add different star types at random in proportion.
+* Add different star types from a diameter threshold (current modification).
 
 <br/>
 
