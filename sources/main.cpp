@@ -305,11 +305,28 @@ static bool load_state_file(const std::string& path, SimulationState& state)
 	return in.good();
 }
 
-static void set_snapshot_camera_angle(float theta, float phi = dim::pi / 3.f)
+static float estimate_snapshot_radius(const SimulationState& state)
+{
+	float max_norm = 0.0f;
+	for (const dim::Vector4& p : state.positions)
+		max_norm = std::max(max_norm, static_cast<float>(p.get_norm()));
+
+	// Keep a sane default for compact states and add margin for larger ones.
+	return std::max(130.0f, max_norm * 1.2f);
+}
+
+static void set_snapshot_camera_angle(float theta, float radius, float phi = dim::pi / 3.f)
 {
 	dim::Camera& camera = dim::Window::get_camera();
-	const float radius = camera.get_position().get_norm();
 	const dim::Vector3 position = dim::Vector3::Spherical(radius, theta, phi);
+	camera.set_position(position);
+	camera.set_direction(-position);
+}
+
+static void set_top_snapshot_camera(float radius)
+{
+	dim::Camera& camera = dim::Window::get_camera();
+	const dim::Vector3 position(0.0f, radius, 0.001f);
 	camera.set_position(position);
 	camera.set_direction(-position);
 }
@@ -340,16 +357,27 @@ static int run_batch_mode(const BatchOptions& options, bool close_window, bool c
 	if (ec)
 		std::cerr << "Warning: failed to create output directory: " << options.output_dir << std::endl;
 
+	const float snapshot_radius = estimate_snapshot_radius(Simulator::state);
 	for (int i = 0; i < options.snapshots; ++i)
 	{
-		const float theta = (2.f * dim::pi * static_cast<float>(i)) / static_cast<float>(options.snapshots);
-		set_snapshot_camera_angle(theta);
+		const bool single_top_snapshot = (options.snapshots == 1 && Simulator::camera_view == Simulator::CameraView::Top);
+		if (single_top_snapshot)
+			set_top_snapshot_camera(snapshot_radius);
+		else
+		{
+			const float theta = (2.f * dim::pi * static_cast<float>(i)) / static_cast<float>(options.snapshots);
+			set_snapshot_camera_angle(theta, snapshot_radius);
+		}
 
-		dim::Window::clear(dim::Color::black);
-		dim::Window::update();
-		Renderer::clear();
-		Simulator::draw();
-		dim::Window::display();
+		// Warm up one frame before capture so post-process buffers are populated.
+		for (int pass = 0; pass < 2; ++pass)
+		{
+			dim::Window::clear(dim::Color::black);
+			dim::Window::update();
+			Renderer::clear();
+			Simulator::draw();
+			dim::Window::display();
+		}
 
 		const std::string path = options.output_dir + "/snapshot_" + std::to_string(i) + ".png";
 		if (save_window_snapshot(path))

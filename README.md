@@ -197,117 +197,159 @@ bash unix_run.sh
 
 ## 🚀 Run
 
-Interactive renderer app:
+### 1) Interactive Viewer
+
+Run the full renderer + UI:
 
 ```bash
 ./build/Galaxy_simulation
-```
-
-Shortcut:
-
-```bash
+# or
 bash run_sim.sh
 ```
 
-Default root config for normal (interactive) simulation:
+`run_sim.sh` loads `simulation.cfg` automatically when no extra arguments are passed.  
+Set `camera_view=top` in `simulation.cfg` for top-down startup.
 
-* `simulation.cfg`
-* when you run `bash run_sim.sh` with no extra arguments, this file is loaded automatically
-* set `camera_view=top` in `simulation.cfg` for top-down startup
+### 2) Batch Snapshot Export
 
-Batch run (compute N steps, then export final snapshots from multiple angles):
+Compute then export snapshots from multiple angles:
 
 ```bash
 ./build/Galaxy_simulation --batch-steps 2000 --snapshots 4 --output-dir outputs
-```
-
-Shortcut:
-
-```bash
+# or
 bash run_batch.sh 2000 4 outputs
 ```
 
-Batch file (each line = one simulation job):
+Run jobs from a batch file:
 
 ```bash
 bash run_batch.sh --batch-config batch_configs/example.batchcfg
 ```
 
-Default root config:
+If `batch_jobs.cfg` exists at repo root, `bash run_batch.sh` uses it automatically.
 
-```bash
-bash run_batch.sh
-```
-
-If `batch_jobs.cfg` exists at repository root, `run_batch.sh` uses it automatically.
-
-Physics-only executable:
+### 3) Physics-Only Runs (No Renderer Loop)
 
 ```bash
 ./build/Galaxy_physics --steps 2000
-```
-
-Shortcut:
-
-```bash
+# or
 bash run_physics.sh --steps 2000
 ```
 
-Important behavior:
-
-* `run_physics.sh` **does not write an output file by default**.
-* use `--state-out <path>` when you want a saved state file.
-* physics loop prints periodic progress logs (`[Physics] progress ...`) during long runs.
-* startup prints selected OpenCL platform/device.
-
-Load simulation parameters from one config line:
+Useful options:
 
 ```bash
+# load parameters from config
 bash run_physics.sh --config simulation.cfg --steps 5000
-```
 
-Choose OpenCL device preference:
-
-```bash
+# choose preferred OpenCL device
 bash run_physics.sh --device cpu --steps 2000
 bash run_physics.sh --device gpu --steps 2000
+
+# write one final state file
+bash run_physics.sh --steps 5000 --state-out outputs/physics_state.bin
+
+# write periodic checkpoints
+bash run_physics.sh --steps 5000 --state-out outputs/physics_state.bin --state-interval 500
 ```
 
-`--device gpu` means "prefer GPU". If unavailable, it falls back to any available OpenCL device.
+Argument reference (`run_physics.sh` / `Galaxy_physics`):
 
-Export final state to a binary file:
+* `--steps <int>`: number of compute iterations. Default: `2000`.
+* `--config <path>`: load first valid `SIMCFG`/`BATCHCFG` line and apply matching simulation keys.
+* `--state-out <path>`: write state to binary file.
+* `--state-interval <int>`: checkpoint every `N` steps (`N > 0`). `0` disables interval checkpoints.
+* `--progress-interval <int>`: print progress every `N` steps (`N >= 1`). Default: `20`.
+* `--device <value>`: OpenCL preference.
+  * accepted: `cpu`, `gpu`
+  * any other value falls back to automatic device selection
+* `--checkpoint-snapshots`: render one snapshot for each checkpoint write.
+  * requires `--state-out` and `--state-interval > 0`
+* `--checkpoint-snapshot-dir <path>`: output folder for checkpoint snapshots.
+* `--checkpoint-snapshot-camera <value>`: camera for checkpoint snapshots.
+  * accepted: `top`, `isometric`
+
+Behavior notes:
+
+* `run_physics.sh` writes no file unless `--state-out` is set.
+* with `--state-interval N`, files are named like `outputs/physics_state_step_500.bin`.
+* the final step is always checkpointed when interval mode is enabled.
+* progress logs default to every 20 steps; override with `--progress-interval N`.
+
+### 4) Checkpoint Snapshot Workflows
+
+Inline snapshots from `run_physics.sh`:
 
 ```bash
-bash run_physics.sh --steps 5000 --state-out outputs/physics_state.bin
+bash run_physics.sh --steps 5000 --state-out outputs/physics_state.bin --state-interval 500 --checkpoint-snapshots
 ```
 
-Preview a saved physics state in the renderer:
+Separate async worker (recommended for clean separation):
+
+```bash
+# Terminal 1
+bash checkpoint_snapshot_worker.sh --state-glob "outputs/physics_state_step_*.bin" --camera top
+
+# Terminal 2
+bash run_physics.sh --steps 5000 --state-out outputs/physics_state.bin --state-interval 500
+```
+
+One-command launcher (starts worker, runs physics, stops worker automatically):
+
+```bash
+bash run_physics_with_worker.sh -- --steps 5000 --state-out outputs/physics_state.bin --state-interval 500
+```
+
+```bash
+bash run_physics_with_worker.sh \
+  --worker-camera isometric \
+  --worker-headless \
+  --worker-snapshot-dir outputs/checkpoint_snapshots_iso \
+  -- --steps 5000 --state-out outputs/physics_state.bin --state-interval 500
+```
+
+Argument reference (worker tools):
+
+* `checkpoint_snapshot_worker.sh`:
+  * `--state-glob <glob>`: checkpoint file pattern to watch (default: `outputs/physics_state_step_*.bin`)
+  * `--snapshot-dir <dir>`: PNG output dir (default: `outputs/checkpoint_snapshots`)
+  * `--camera <value>`: `top` or `isometric` (default: `top`)
+  * `--poll-interval <seconds>`: scan cadence (default: `2`)
+  * `--headless`: run renderer through `xvfb-run`
+* `run_physics_with_worker.sh`:
+  * worker args: `--worker-camera`, `--worker-snapshot-dir`, `--worker-poll-interval`, `--worker-headless`
+  * physics args are passed after `--`
+  * required physics args: `--state-out <path>` and `--state-interval <N>` (`N > 0`)
+
+### 5) Replay From Saved State
+
+Preview one saved state:
 
 ```bash
 bash run_sim.sh --state-in outputs/physics_state.bin
 ```
 
-Export snapshots from a saved physics state (no extra compute steps):
+Export snapshots from a saved state without extra physics steps:
 
 ```bash
 ./build/Galaxy_simulation --state-in outputs/physics_state.bin --batch-steps 1 --snapshots 4 --output-dir outputs/from_state
 ```
 
-Notes:
+`--state-in` cannot be combined with `--physics-only` or `--batch-config`.
 
-* when `--state-in` is used with batch mode, physics stepping is skipped and snapshots are rendered from loaded state.
-* `--batch-config` is not supported together with `--state-in`.
+### 6) State File Format (`--state-out`)
 
-State file format (`--state-out`):
+Header:
 
-* header:
-  * `magic` (`uint32`) = `0x47414C58` (`GALX`)
-  * `version` (`uint32`) = `1`
-  * `nb_stars` (`uint32`)
-* payload (packed, in this order):
-  * `positions[nb_stars]` as `dim::Vector4`
-  * `speeds[nb_stars]` as `dim::Vector4`
-  * `star_types[nb_stars]` as `int`
+* `magic` (`uint32`) = `0x47414C58` (`GALX`)
+* `version` (`uint32`) = `1`
+* `nb_stars` (`uint32`)
+
+Payload order:
+
+* `positions[nb_stars]` as `dim::Vector4`
+* `speeds[nb_stars]` as `dim::Vector4`
+* `star_types[nb_stars]` as `int`
 
 ## ⚙️ Janus + Performance Update
 
@@ -337,35 +379,72 @@ This branch includes:
 
 ## 🧪 Batch Experiment Workflow
 
-Use batch mode when you want to simulate many frames and only inspect final results:
+Use batch mode when you want to simulate many frames and inspect only final snapshots.
+
+### Quick Commands
+
+Single run:
 
 ```bash
 ./build/Galaxy_simulation --batch-steps 10000 --snapshots 6 --output-dir outputs/run_001
 ```
 
-Run many jobs from one file (line-by-line):
+Run many jobs from config file:
 
 ```bash
 ./build/Galaxy_simulation --batch-config batch_configs/example.batchcfg
 ```
 
-Root-level default batch file:
+Use root default file:
 
 ```bash
 ./build/Galaxy_simulation --batch-config batch_jobs.cfg
 ```
 
-Batch file format:
+### CLI Argument Reference (`run_batch.sh` / `Galaxy_simulation`)
+
+* `--batch-steps <int>`: number of compute steps before snapshot export (`> 0` enables batch mode).
+* `--snapshots <int>`: number of output camera angles (`>= 1`).
+* `--output-dir <path>`: destination folder for PNGs.
+* `--batch-config <path>`: run all jobs from a config file.
+* `--config <path>`: preload one config line before run.
+* `--state-in <path>`: load an existing `.bin` state instead of computing.
+* `--physics-only`: no renderer path (compute only).
+
+Compatibility notes:
+
+* `--state-in` cannot be combined with `--physics-only` or `--batch-config`.
+* `run_batch.sh` supports:
+  * positional form: `bash run_batch.sh [steps] [snapshots] [output_dir]`
+  * config form: `bash run_batch.sh --batch-config <path> [steps] [snapshots] [output_dir]`
+* if root `batch_jobs.cfg` exists, `bash run_batch.sh` uses it automatically.
+
+### Batch Config File Format
 
 * each non-comment line is one job
 * each line is `key=value` tokens
 * lines can start with `SIMCFG`
-* recommended keys per line:
+* recommended per-line keys:
   * simulation: `simulation_type step smoothing_length interaction_rate nb_stars galaxy_diameter galaxy_thickness galaxies_distance stars_speed black_hole_mass negative_attraction_constant repulsion_constant matter_distribution type_diameter positive_ratio core_extra_negative_density camera_view`
   * batch: `batch_steps snapshots output_dir`
-* `camera_view` values:
-  * `isometric` (default)
-  * `top` (top-down start view)
+
+Accepted enum values:
+
+* `simulation_type`: `Galaxy`, `Collision`, `Universe` (also accepted: `0`, `1`, `2`)
+* `matter_distribution`: `CoreHalo`, `RandomMix`, `SplitX` (also accepted: `0`, `1`, `2`; `Core+halo` also accepted)
+* `camera_view`: `isometric`, `top` (also accepted: `iso`, `0`, `1`)
+
+Minimal line template:
+
+```text
+SIMCFG simulation_type=Galaxy nb_stars=20000 batch_steps=2000 snapshots=4 output_dir=outputs/run_001
+```
+
+Full line template:
+
+```text
+SIMCFG simulation_type=Galaxy step=0.001000 smoothing_length=1.000000 interaction_rate=0.050000 nb_stars=20000 galaxy_diameter=100.000000 galaxy_thickness=5.000000 galaxies_distance=75.000000 stars_speed=20.000000 black_hole_mass=1000.000000 negative_attraction_constant=1.000000 repulsion_constant=1.000000 matter_distribution=CoreHalo type_diameter=40.000000 positive_ratio=0.500000 core_extra_negative_density=0.000000 camera_view=top batch_steps=2000 snapshots=4 output_dir=outputs/run_001
+```
 
 Recommended workflow:
 

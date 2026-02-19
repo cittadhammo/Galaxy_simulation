@@ -3,7 +3,9 @@
 #include "Menu.hpp"
 #include "SimulationData.hpp"
 #include <algorithm>
+#include <cstdlib>
 #include <cstdint>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -78,9 +80,14 @@ static void set_default_values_headless()
 struct PhysicsOptions
 {
 	int steps = 2000;
+	int progress_interval = 20;
+	int state_interval = 0;
 	ComputeShader::DevicePreference device_preference = ComputeShader::DevicePreference::Any;
 	std::string config_path;
 	std::string state_out;
+	bool checkpoint_snapshots = false;
+	std::string checkpoint_snapshot_dir;
+	std::string checkpoint_snapshot_camera = "top";
 };
 
 using ConfigKV = std::unordered_map<std::string, std::string>;
@@ -244,19 +251,73 @@ static PhysicsOptions parse_args(int argc, char** argv)
 			else
 				options.device_preference = ComputeShader::DevicePreference::Any;
 		}
+		else if (arg == "--progress-interval" && i + 1 < argc)
+		{
+			int parsed = options.progress_interval;
+			if (to_int(argv[++i], parsed))
+				options.progress_interval = std::max(1, parsed);
+		}
+		else if (arg == "--state-interval" && i + 1 < argc)
+		{
+			int parsed = options.state_interval;
+			if (to_int(argv[++i], parsed))
+				options.state_interval = std::max(0, parsed);
+		}
+		else if (arg == "--checkpoint-snapshots")
+			options.checkpoint_snapshots = true;
+		else if (arg == "--checkpoint-snapshot-dir" && i + 1 < argc)
+			options.checkpoint_snapshot_dir = argv[++i];
+		else if (arg == "--checkpoint-snapshot-camera" && i + 1 < argc)
+			options.checkpoint_snapshot_camera = argv[++i];
 	}
 
 	return options;
 }
 
+static bool is_valid_camera_view(const std::string& value)
+{
+	return value == "top" || value == "isometric";
+}
+
+static std::string shell_quote(const std::string& value)
+{
+	std::string out = "'";
+	for (const char c : value)
+	{
+		if (c == '\'')
+			out += "'\\''";
+		else
+			out += c;
+	}
+	out += "'";
+	return out;
+}
+
+static std::string build_step_labeled_path(const std::string& base_path, int step_index)
+{
+	namespace fs = std::filesystem;
+	const fs::path base(base_path);
+	const fs::path parent = base.has_parent_path() ? base.parent_path() : fs::path(".");
+	const std::string stem = base.stem().string().empty() ? std::string("physics_state") : base.stem().string();
+	const std::string ext = base.extension().string().empty() ? std::string(".bin") : base.extension().string();
+	const fs::path labeled = parent / (stem + "_step_" + std::to_string(step_index) + ext);
+	return labeled.string();
+}
+
 static bool write_state_file(const std::string& path, const SimulationState& state)
 {
+	namespace fs = std::filesystem;
+
 	struct Header
 	{
 		uint32_t magic = 0x47414C58; // GALX
 		uint32_t version = 1;
 		uint32_t nb_stars = 0;
 	};
+
+	const fs::path output_path(path);
+	if (output_path.has_parent_path())
+		fs::create_directories(output_path.parent_path());
 
 	std::ofstream out(path, std::ios::binary);
 	if (!out.is_open())
@@ -268,6 +329,65 @@ static bool write_state_file(const std::string& path, const SimulationState& sta
 	out.write(reinterpret_cast<const char*>(state.speeds.data()), static_cast<std::streamsize>(state.speeds.size() * sizeof(dim::Vector4)));
 	out.write(reinterpret_cast<const char*>(state.star_types.data()), static_cast<std::streamsize>(state.star_types.size() * sizeof(int)));
 	return out.good();
+}
+
+static bool write_camera_config(const std::string& path, const std::string& camera_view)
+{
+	namespace fs = std::filesystem;
+	const fs::path config_path(path);
+	if (config_path.has_parent_path())
+		fs::create_directories(config_path.parent_path());
+
+	std::ofstream out(path);
+	if (!out.is_open())
+		return false;
+
+	out << "SIMCFG camera_view=" << camera_view << "\n";
+	return out.good();
+}
+
+static std::filesystem::path find_renderer_executable()
+{
+	namespace fs = std::filesystem;
+	const fs::path from_root = fs::current_path() / "build" / "Galaxy_simulation";
+	if (fs::exists(from_root))
+		return from_root;
+
+	const fs::path from_build = fs::current_path() / "Galaxy_simulation";
+	if (fs::exists(from_build))
+		return from_build;
+
+	return {};
+}
+
+static bool render_checkpoint_snapshot(
+	const std::filesystem::path& renderer_executable,
+	const std::string& state_path,
+	const std::string& output_dir,
+	const std::string& camera_config_path,
+	int step_index)
+{
+	namespace fs = std::filesystem;
+	const std::string cmd =
+		shell_quote(renderer_executable.string()) +
+		" --state-in " + shell_quote(state_path) +
+		" --batch-steps 1 --snapshots 1 --output-dir " + shell_quote(output_dir) +
+		" --config " + shell_quote(camera_config_path);
+
+	const int code = std::system(cmd.c_str());
+	if (code != 0)
+		return false;
+
+	const fs::path generated = fs::path(output_dir) / "snapshot_0.png";
+	const fs::path labeled = fs::path(output_dir) / ("snapshot_step_" + std::to_string(step_index) + ".png");
+	if (!fs::exists(generated))
+		return false;
+
+	std::error_code ec;
+	fs::remove(labeled, ec);
+	ec.clear();
+	fs::rename(generated, labeled, ec);
+	return !ec;
 }
 
 int main(int argc, char** argv)
@@ -301,11 +421,92 @@ int main(int argc, char** argv)
 	ComputeShader::init("shaders/compute/cl_compute_shader.cl", options.device_preference);
 	Computer::init(config, state);
 
+	std::filesystem::path renderer_executable;
+	std::string checkpoint_snapshot_dir;
+	std::string checkpoint_camera_config_path;
+	if (options.checkpoint_snapshots)
+	{
+		if (options.state_out.empty() || options.state_interval <= 0)
+		{
+			std::cerr << "Error: --checkpoint-snapshots requires --state-out and --state-interval > 0." << std::endl;
+			return EXIT_FAILURE;
+		}
+
+		if (!is_valid_camera_view(options.checkpoint_snapshot_camera))
+		{
+			std::cerr << "Error: --checkpoint-snapshot-camera must be 'top' or 'isometric'." << std::endl;
+			return EXIT_FAILURE;
+		}
+
+		renderer_executable = find_renderer_executable();
+		if (renderer_executable.empty())
+		{
+			std::cerr << "Error: unable to find Galaxy_simulation executable for snapshot rendering." << std::endl;
+			return EXIT_FAILURE;
+		}
+
+		const std::filesystem::path state_base(options.state_out);
+		checkpoint_snapshot_dir = options.checkpoint_snapshot_dir;
+		if (checkpoint_snapshot_dir.empty())
+		{
+			const std::filesystem::path parent = state_base.has_parent_path() ? state_base.parent_path() : std::filesystem::path(".");
+			checkpoint_snapshot_dir = (parent / "checkpoint_snapshots").string();
+		}
+
+		std::filesystem::create_directories(checkpoint_snapshot_dir);
+		checkpoint_camera_config_path =
+			(std::filesystem::path(checkpoint_snapshot_dir) / ".checkpoint_camera.cfg").string();
+		if (!write_camera_config(checkpoint_camera_config_path, options.checkpoint_snapshot_camera))
+		{
+			std::cerr << "Error: failed to write camera config for checkpoint snapshots." << std::endl;
+			return EXIT_FAILURE;
+		}
+	}
+
 	std::cout << "[Physics] running " << options.steps << " steps, stars=" << config.nb_stars << std::endl;
-	const int progress_interval = std::max(1, options.steps / 20);
+	const int progress_interval = options.progress_interval;
 	for (int i = 0; i < options.steps; ++i)
 	{
 		Computer::compute(config, state);
+		const int current_step = i + 1;
+
+		if (!options.state_out.empty() && options.state_interval > 0)
+		{
+			const bool is_interval_step = (current_step % options.state_interval) == 0;
+			const bool is_final_step = current_step == options.steps;
+			if (is_interval_step || is_final_step)
+			{
+				const std::string checkpoint_path = build_step_labeled_path(options.state_out, current_step);
+				if (write_state_file(checkpoint_path, state))
+					std::cout << "[Physics] wrote checkpoint: " << checkpoint_path << std::endl;
+				else
+				{
+					std::cerr << "Error: failed to write checkpoint file: " << checkpoint_path << std::endl;
+					return EXIT_FAILURE;
+				}
+
+				if (options.checkpoint_snapshots)
+				{
+					if (render_checkpoint_snapshot(
+						renderer_executable,
+						checkpoint_path,
+						checkpoint_snapshot_dir,
+						checkpoint_camera_config_path,
+						current_step))
+					{
+						std::cout << "[Physics] wrote snapshot: "
+							<< (std::filesystem::path(checkpoint_snapshot_dir) / ("snapshot_step_" + std::to_string(current_step) + ".png")).string()
+							<< std::endl;
+					}
+					else
+					{
+						std::cerr << "Error: failed to render checkpoint snapshot at step " << current_step << std::endl;
+						return EXIT_FAILURE;
+					}
+				}
+			}
+		}
+
 		if ((i + 1) % progress_interval == 0 || (i + 1) == options.steps)
 		{
 			const float progress = (100.0f * static_cast<float>(i + 1)) / static_cast<float>(std::max(1, options.steps));
@@ -317,12 +518,15 @@ int main(int argc, char** argv)
 
 	if (!options.state_out.empty())
 	{
-		if (write_state_file(options.state_out, state))
-			std::cout << "[Physics] wrote state: " << options.state_out << std::endl;
-		else
+		if (options.state_interval <= 0)
 		{
-			std::cerr << "Error: failed to write state file: " << options.state_out << std::endl;
-			return EXIT_FAILURE;
+			if (write_state_file(options.state_out, state))
+				std::cout << "[Physics] wrote state: " << options.state_out << std::endl;
+			else
+			{
+				std::cerr << "Error: failed to write state file: " << options.state_out << std::endl;
+				return EXIT_FAILURE;
+			}
 		}
 	}
 
