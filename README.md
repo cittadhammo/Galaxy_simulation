@@ -287,10 +287,16 @@ Preview a saved physics state in the renderer:
 bash run_sim.sh --state-in outputs/physics_state.bin
 ```
 
-Current limitation:
+Export snapshots from a saved physics state (no extra compute steps):
 
-* `--state-in` is currently interactive preview only.
-* it is not yet wired for `--batch-steps` or `--batch-config`.
+```bash
+./build/Galaxy_simulation --state-in outputs/physics_state.bin --batch-steps 1 --snapshots 4 --output-dir outputs/from_state
+```
+
+Notes:
+
+* when `--state-in` is used with batch mode, physics stepping is skipped and snapshots are rendered from loaded state.
+* `--batch-config` is not supported together with `--state-in`.
 
 State file format (`--state-out`):
 

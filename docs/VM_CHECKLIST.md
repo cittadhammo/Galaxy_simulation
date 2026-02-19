@@ -61,6 +61,12 @@ Run this on your local machine (not on VM):
 scp ubuntu@<vm-ip>:~/Galaxy_simulation/outputs/vm_state.bin ./outputs/
 ```
 
+### 7) Render VM state locally as snapshots
+
+```bash
+./build/Galaxy_simulation --state-in outputs/vm_state.bin --batch-steps 1 --snapshots 4 --output-dir outputs/vm_preview
+```
+
 ---
 
 ## C) Google Colab fallback (no credit card)

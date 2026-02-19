@@ -314,16 +314,24 @@ static void set_snapshot_camera_angle(float theta, float phi = dim::pi / 3.f)
 	camera.set_direction(-position);
 }
 
-static int run_batch_mode(const BatchOptions& options, bool close_window)
+static int run_batch_mode(const BatchOptions& options, bool close_window, bool compute_steps = true)
 {
-	std::cout << "Running batch mode for " << options.steps << " steps..." << std::endl;
+	if (compute_steps)
+		std::cout << "Running batch mode for " << options.steps << " steps..." << std::endl;
+	else
+		std::cout << "Running batch mode from loaded state (no physics stepping)." << std::endl;
 
-	Menu::pause = false;
-	for (int i = 0; i < options.steps && dim::Window::running; ++i)
+	if (compute_steps)
 	{
-		Simulator::menu_update();
-		Computer::compute(Simulator::config, Simulator::state);
+		Menu::pause = false;
+		for (int i = 0; i < options.steps && dim::Window::running; ++i)
+		{
+			Simulator::menu_update();
+			Computer::compute(Simulator::config, Simulator::state);
+		}
 	}
+	else
+		Menu::pause = true;
 
 	Renderer::update_vbo(Simulator::state);
 
@@ -401,9 +409,9 @@ int main(int argc, char** argv)
 
 	if (!mutable_batch_options.state_in_path.empty())
 	{
-		if (mutable_batch_options.physics_only || mutable_batch_options.enabled || !mutable_batch_options.batch_config_path.empty())
+		if (mutable_batch_options.physics_only || !mutable_batch_options.batch_config_path.empty())
 		{
-			std::cerr << "Error: --state-in currently supports interactive preview mode only (no --physics-only / batch mode)." << std::endl;
+			std::cerr << "Error: --state-in does not support --physics-only or --batch-config." << std::endl;
 			if (!mutable_batch_options.physics_only)
 				dim::Window::close();
 			return EXIT_FAILURE;
@@ -475,7 +483,7 @@ int main(int argc, char** argv)
 		return run_physics_only_mode(mutable_batch_options);
 
 	if (mutable_batch_options.enabled)
-		return run_batch_mode(mutable_batch_options, true);
+		return run_batch_mode(mutable_batch_options, true, mutable_batch_options.state_in_path.empty());
 
 	// The computation thread.
 	std::thread simulation_thread([]()

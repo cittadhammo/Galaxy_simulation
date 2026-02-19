@@ -83,7 +83,16 @@ files.download('outputs/colab_state_small.bin')
 # files.download('outputs/colab_state.bin')  # uncomment if you ran Cell G
 ```
 
-## 3) Common issues
+## 3) Render that state locally
+
+After downloading the `.bin` file to your computer:
+
+```bash
+./build/Galaxy_simulation --state-in outputs/colab_state_small.bin --batch-steps 1 --snapshots 4 --output-dir outputs/colab_preview
+```
+
+This renders snapshots from the loaded state without running extra physics steps.
+## 4) Common issues
 
 ### Error: `No platforms found!`
 
@@ -110,7 +119,7 @@ Try:
 
 Colab sessions are temporary. Keep output files downloaded right after generation.
 
-## 4) Important note
+## 5) Important note
 
 Colab is for quick tests only.
 

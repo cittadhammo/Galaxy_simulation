@@ -98,6 +98,12 @@ To preview a saved physics file:
 bash run_sim.sh --state-in outputs/physics_state.bin
 ```
 
+To export snapshots from a saved physics file:
+
+```bash
+./build/Galaxy_simulation --state-in outputs/physics_state.bin --batch-steps 1 --snapshots 4 --output-dir outputs/from_state
+```
+
 or batch snapshots:
 
 ```bash
@@ -105,7 +111,7 @@ bash run_batch.sh 200 2 outputs/local_test
 ```
 
 The direct loader for `vm_state.bin` into renderer is the next step we can add.
-Basic loader is now available for interactive preview mode only.
+`--state-in` works for interactive preview and direct batch snapshot export.
 
 ## 8) If something fails
 
