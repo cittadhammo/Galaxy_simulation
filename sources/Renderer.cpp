@@ -1,5 +1,4 @@
 #include "Renderer.hpp"
-#include "Simulator.hpp"
 
 GLuint				Renderer::vbo = 0;
 GLuint				Renderer::vao = 0;
@@ -134,7 +133,7 @@ void Renderer::clear()
 	blur_fbo_2.unbind();
 }
 
-void Renderer::draw()
+void Renderer::draw(const SimulationState& state)
 {
     glDisable(GL_POINT_SMOOTH);
     glDisable(GL_LINE_SMOOTH);
@@ -148,7 +147,7 @@ void Renderer::draw()
             bind_vbo();
 
                 dim::Shader::get("galaxy").send_uniform("u_mvp", dim::Window::get_camera().get_matrix());
-                draw_vbo(Simulator::state);
+                draw_vbo(state);
 
             unbind_vbo();
         dim::Shader::get("galaxy").unbind();
@@ -164,7 +163,7 @@ void Renderer::draw()
             bind_vbo();
 
                 dim::Shader::get("galaxy").send_uniform("u_mvp", dim::Window::get_camera().get_matrix());
-                draw_vbo(Simulator::state);
+                draw_vbo(state);
 
             unbind_vbo();
         dim::Shader::get("galaxy").unbind();

@@ -174,7 +174,7 @@ void Simulator::check_events(const sf::Event& sf_event)
 void Simulator::draw()
 {
 	Renderer::clear();
-	Renderer::draw();
+	Renderer::draw(state);
 }
 
 void Simulator::apply_camera_view()

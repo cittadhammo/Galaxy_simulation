@@ -65,7 +65,7 @@ public:
 	/**
 	 * @brief Draw the simulation.
 	 */
-	static void draw();
+	static void draw(const SimulationState& state);
 };
 
 #endif
