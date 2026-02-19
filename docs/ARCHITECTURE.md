@@ -92,6 +92,12 @@ Today, local visualization is still through the normal app:
 bash run_sim.sh
 ```
 
+To preview a saved physics file:
+
+```bash
+bash run_sim.sh --state-in outputs/physics_state.bin
+```
+
 or batch snapshots:
 
 ```bash
@@ -99,6 +105,7 @@ bash run_batch.sh 200 2 outputs/local_test
 ```
 
 The direct loader for `vm_state.bin` into renderer is the next step we can add.
+Basic loader is now available for interactive preview mode only.
 
 ## 8) If something fails
 

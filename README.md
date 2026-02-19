@@ -281,6 +281,17 @@ Export final state to a binary file:
 bash run_physics.sh --steps 5000 --state-out outputs/physics_state.bin
 ```
 
+Preview a saved physics state in the renderer:
+
+```bash
+bash run_sim.sh --state-in outputs/physics_state.bin
+```
+
+Current limitation:
+
+* `--state-in` is currently interactive preview only.
+* it is not yet wired for `--batch-steps` or `--batch-config`.
+
 State file format (`--state-out`):
 
 * header:

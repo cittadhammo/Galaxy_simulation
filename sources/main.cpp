@@ -12,6 +12,7 @@
 #include <fstream>
 #include <sstream>
 #include <cctype>
+#include <cstdint>
 
 
 // Function to print OpenGL context information
@@ -42,6 +43,7 @@ struct BatchOptions
 	std::string output_dir = "outputs";
 	std::string config_path;
 	std::string batch_config_path;
+	std::string state_in_path;
 };
 
 static int parse_int(const char* value, int fallback)
@@ -78,6 +80,8 @@ static BatchOptions parse_args(int argc, char** argv)
 			options.config_path = argv[++i];
 		else if (arg == "--batch-config" && i + 1 < argc)
 			options.batch_config_path = argv[++i];
+		else if (arg == "--state-in" && i + 1 < argc)
+			options.state_in_path = argv[++i];
 		else if (arg == "--physics-only")
 			options.physics_only = true;
 	}
@@ -268,6 +272,39 @@ static bool save_window_snapshot(const std::string& path)
 	return image.saveToFile(path);
 }
 
+static bool load_state_file(const std::string& path, SimulationState& state)
+{
+	struct StateHeader
+	{
+		uint32_t magic;
+		uint32_t version;
+		uint32_t nb_stars;
+	};
+
+	std::ifstream in(path, std::ios::binary);
+	if (!in.is_open())
+		return false;
+
+	StateHeader header{};
+	in.read(reinterpret_cast<char*>(&header), sizeof(header));
+	if (!in.good())
+		return false;
+
+	if (header.magic != 0x47414C58u || header.version != 1u)
+		return false;
+
+	const size_t n = static_cast<size_t>(header.nb_stars);
+	state.positions.resize(n);
+	state.speeds.resize(n);
+	state.star_types.resize(n);
+	state.accelerations.assign(n, dim::Vector4::null);
+
+	in.read(reinterpret_cast<char*>(state.positions.data()), static_cast<std::streamsize>(n * sizeof(dim::Vector4)));
+	in.read(reinterpret_cast<char*>(state.speeds.data()), static_cast<std::streamsize>(n * sizeof(dim::Vector4)));
+	in.read(reinterpret_cast<char*>(state.star_types.data()), static_cast<std::streamsize>(n * sizeof(int)));
+	return in.good();
+}
+
 static void set_snapshot_camera_angle(float theta, float phi = dim::pi / 3.f)
 {
 	dim::Camera& camera = dim::Window::get_camera();
@@ -360,6 +397,37 @@ int main(int argc, char** argv)
 			Simulator::restart();
 			Simulator::apply_camera_view();
 		}
+	}
+
+	if (!mutable_batch_options.state_in_path.empty())
+	{
+		if (mutable_batch_options.physics_only || mutable_batch_options.enabled || !mutable_batch_options.batch_config_path.empty())
+		{
+			std::cerr << "Error: --state-in currently supports interactive preview mode only (no --physics-only / batch mode)." << std::endl;
+			if (!mutable_batch_options.physics_only)
+				dim::Window::close();
+			return EXIT_FAILURE;
+		}
+
+		SimulationState loaded_state;
+		if (!load_state_file(mutable_batch_options.state_in_path, loaded_state))
+		{
+			std::cerr << "Error: failed to load state file: " << mutable_batch_options.state_in_path << std::endl;
+			dim::Window::close();
+			return EXIT_FAILURE;
+		}
+
+		Simulator::state = std::move(loaded_state);
+		Simulator::config.nb_stars = static_cast<int>(Simulator::state.positions.size());
+		Simulator::nb_stars = Simulator::config.nb_stars;
+		Menu::nb_stars = Simulator::config.nb_stars;
+		Renderer::init_vbo(Simulator::state);
+		Renderer::update_vbo(Simulator::state);
+		Menu::pause = true;
+		Simulator::computation_done = true;
+
+		std::cout << "[State] loaded " << Simulator::state.positions.size()
+			<< " stars from " << mutable_batch_options.state_in_path << std::endl;
 	}
 
 	if (!mutable_batch_options.batch_config_path.empty())
