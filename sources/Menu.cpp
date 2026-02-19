@@ -116,6 +116,45 @@ static bool refresh_measurement_bounds(bool preserve_marker_positions)
 	return true;
 }
 
+static bool slider_with_input_float(const char* slider_id, const char* input_id, float* value, float min_value, float max_value, const char* format = "%.3f", ImGuiSliderFlags flags = 0)
+{
+	const float available_width = ImGui::GetContentRegionAvail().x;
+	const float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+	const float input_width = std::max(90.0f, available_width * 0.25f);
+	const float slider_width = std::max(40.0f, available_width - input_width - spacing);
+	const char* input_format = (format == NULL ? "%.3f" : format);
+
+	ImGui::PushItemWidth(slider_width);
+	const bool slider_changed = ImGui::SliderFloat(slider_id, value, min_value, max_value, format, flags);
+	ImGui::PopItemWidth();
+
+	ImGui::SameLine();
+	ImGui::PushItemWidth(input_width);
+	const bool input_changed = ImGui::InputFloat(input_id, value, 0.0f, 0.0f, input_format, ImGuiInputTextFlags_CharsScientific);
+	ImGui::PopItemWidth();
+
+	return slider_changed || input_changed;
+}
+
+static bool slider_with_input_int(const char* slider_id, const char* input_id, int* value, int min_value, int max_value, const char* format = "%d", ImGuiSliderFlags flags = 0)
+{
+	const float available_width = ImGui::GetContentRegionAvail().x;
+	const float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+	const float input_width = std::max(90.0f, available_width * 0.25f);
+	const float slider_width = std::max(40.0f, available_width - input_width - spacing);
+
+	ImGui::PushItemWidth(slider_width);
+	const bool slider_changed = ImGui::SliderInt(slider_id, value, min_value, max_value, format, flags);
+	ImGui::PopItemWidth();
+
+	ImGui::SameLine();
+	ImGui::PushItemWidth(input_width);
+	const bool input_changed = ImGui::InputInt(input_id, value, 0, 0, ImGuiInputTextFlags_CharsDecimal);
+	ImGui::PopItemWidth();
+
+	return slider_changed || input_changed;
+}
+
 
 void Menu::check_events(const sf::Event& sf_event)
 {
@@ -212,75 +251,75 @@ void Menu::set_default_values()
 void Menu::galaxy()
 {
 	ImGui::Text("The number of stars");
-	ImGui::SliderInt("##nb_stars", &nb_stars, 1000, 1000000, NULL, ImGuiSliderFlags_Logarithmic);
+	slider_with_input_int("##nb_stars", "##nb_stars_input", &nb_stars, 1000, 1000000, NULL, ImGuiSliderFlags_Logarithmic);
 
 	ImGui::NewLine();
 
 	ImGui::Text("The diameter of the galaxy");
-	ImGui::SliderFloat("##galaxy_diameter", &galaxy_diameter, 10.f, 1000.f, "%.0f");
+	slider_with_input_float("##galaxy_diameter", "##galaxy_diameter_input", &galaxy_diameter, 10.f, 1000.f, "%.0f");
 
 	ImGui::NewLine();
 
 	ImGui::Text("The thickness of the galaxy");
-	ImGui::SliderFloat("##galaxy_thickness", &galaxy_thickness, 1.f, 100.f, "%.0f");
+	slider_with_input_float("##galaxy_thickness", "##galaxy_thickness_input", &galaxy_thickness, 1.f, 100.f, "%.0f");
 
 	ImGui::NewLine();
 
 	ImGui::Text("Initial speed of positive-mass stars");
-	ImGui::SliderFloat("##positive_stars_speed", &positive_stars_speed, -500.f, 500.f, "%.1f");
+	slider_with_input_float("##positive_stars_speed", "##positive_stars_speed_input", &positive_stars_speed, -10.f, 10.f, "%.2f");
 	ImGui::Text("Initial speed of negative-mass stars");
-	ImGui::SliderFloat("##negative_stars_speed", &negative_stars_speed, -500.f, 500.f, "%.1f");
+	slider_with_input_float("##negative_stars_speed", "##negative_stars_speed_input", &negative_stars_speed, -10.f, 10.f, "%.2f");
 
 	ImGui::NewLine();
 
 	ImGui::Text("The mass of the black hole");
-	ImGui::SliderFloat("##black_hole_mass", &black_hole_mass, 100.f, 1000000.f, "%.0f", ImGuiSliderFlags_Logarithmic);
+	slider_with_input_float("##black_hole_mass", "##black_hole_mass_input", &black_hole_mass, 100.f, 1000000.f, "%.0f", ImGuiSliderFlags_Logarithmic);
 }
 
 void Menu::collision()
 {
 	ImGui::Text("The number of stars");
-	ImGui::SliderInt("##nb_stars", &nb_stars, 1000, 1000000, NULL, ImGuiSliderFlags_Logarithmic);
+	slider_with_input_int("##nb_stars", "##nb_stars_input", &nb_stars, 1000, 1000000, NULL, ImGuiSliderFlags_Logarithmic);
 
 	ImGui::NewLine();
 
 	ImGui::Text("The diameter of the galaxies");
-	ImGui::SliderFloat("##galaxy_diameter", &galaxy_diameter, 10.f, 1000.f, "%.0f");
+	slider_with_input_float("##galaxy_diameter", "##galaxy_diameter_input", &galaxy_diameter, 10.f, 1000.f, "%.0f");
 
 	ImGui::NewLine();
 
 	ImGui::Text("The thickness of the galaxies");
-	ImGui::SliderFloat("##galaxy_thickness", &galaxy_thickness, 1.f, 100.f, "%.0f");
+	slider_with_input_float("##galaxy_thickness", "##galaxy_thickness_input", &galaxy_thickness, 1.f, 100.f, "%.0f");
 
 	ImGui::NewLine();
 
 	ImGui::Text("The distance between the galaxies");
-	ImGui::SliderFloat("##galaxies_distance", &galaxies_distance, 10.f, 1000.f, "%.0f");
+	slider_with_input_float("##galaxies_distance", "##galaxies_distance_input", &galaxies_distance, 10.f, 1000.f, "%.0f");
 
 	ImGui::NewLine();
 
 	ImGui::Text("Initial speed of positive-mass stars");
-	ImGui::SliderFloat("##positive_stars_speed", &positive_stars_speed, -500.f, 500.f, "%.1f");
+	slider_with_input_float("##positive_stars_speed", "##positive_stars_speed_input", &positive_stars_speed, -10.f, 10.f, "%.2f");
 	ImGui::Text("Initial speed of negative-mass stars");
-	ImGui::SliderFloat("##negative_stars_speed", &negative_stars_speed, -500.f, 500.f, "%.1f");
+	slider_with_input_float("##negative_stars_speed", "##negative_stars_speed_input", &negative_stars_speed, -10.f, 10.f, "%.2f");
 }
 
 void Menu::universe()
 {
 	ImGui::Text("The number of galaxies");
-	ImGui::SliderInt("##nb_stars", &nb_stars, 1000, 1000000, NULL, ImGuiSliderFlags_Logarithmic);
+	slider_with_input_int("##nb_stars", "##nb_stars_input", &nb_stars, 1000, 1000000, NULL, ImGuiSliderFlags_Logarithmic);
 
 	ImGui::NewLine();
 
 	ImGui::Text("Ihe initial diameter of the universe");
-	ImGui::SliderFloat("##galaxy_diameter", &galaxy_diameter, 1.f, 100.f, "%.1f");
+	slider_with_input_float("##galaxy_diameter", "##galaxy_diameter_input", &galaxy_diameter, 1.f, 100.f, "%.1f");
 
 	ImGui::NewLine();
 
 	ImGui::Text("Initial speed of positive-mass stars");
-	ImGui::SliderFloat("##positive_stars_speed", &positive_stars_speed, -500.f, 500.f, "%.1f");
+	slider_with_input_float("##positive_stars_speed", "##positive_stars_speed_input", &positive_stars_speed, -10.f, 10.f, "%.2f");
 	ImGui::Text("Initial speed of negative-mass stars");
-	ImGui::SliderFloat("##negative_stars_speed", &negative_stars_speed, -500.f, 500.f, "%.1f");
+	slider_with_input_float("##negative_stars_speed", "##negative_stars_speed_input", &negative_stars_speed, -10.f, 10.f, "%.2f");
 }
 
 void Menu::display()
@@ -353,7 +392,7 @@ void Menu::display()
 			}
 		}
 		ImGui::Text("Pan speed");
-		ImGui::SliderFloat("##camera_pan_speed", &camera_pan_speed, 0.1f, 20.0f, "%.2f");
+		slider_with_input_float("##camera_pan_speed", "##camera_pan_speed_input", &camera_pan_speed, 0.1f, 20.0f, "%.2f");
 		{
 			dim::Controller& controller = dim::Window::get_controller();
 			if (controller.get_type() == dim::Controller::Type::Orbit)
@@ -403,9 +442,9 @@ void Menu::display()
 			measurement_axis_max = measurement_axis_min + 0.001f;
 
 		ImGui::Text("Marker A position");
-		ImGui::SliderFloat("##measurement_marker_a", &measurement_marker_a, measurement_axis_min, measurement_axis_max, "%.3f");
+		slider_with_input_float("##measurement_marker_a", "##measurement_marker_a_input", &measurement_marker_a, measurement_axis_min, measurement_axis_max, "%.3f");
 		ImGui::Text("Marker B position");
-		ImGui::SliderFloat("##measurement_marker_b", &measurement_marker_b, measurement_axis_min, measurement_axis_max, "%.3f");
+		slider_with_input_float("##measurement_marker_b", "##measurement_marker_b_input", &measurement_marker_b, measurement_axis_min, measurement_axis_max, "%.3f");
 		measurement_value = std::fabs(measurement_marker_b - measurement_marker_a);
 		ImGui::Text("Distance |A-B| = %.4f sim units", measurement_value);
 		ImGui::Text("Axis bounds: [%.3f, %.3f]", measurement_axis_min, measurement_axis_max);
@@ -414,13 +453,13 @@ void Menu::display()
 
 		// Janus force multipliers (real-time).
 		ImGui::Text("Negative Attraction Constant");
-		ImGui::SliderFloat("##Negative_Attraction_Constant", &negative_attraction_constant, -10.0f, 10.0f);
+		slider_with_input_float("##Negative_Attraction_Constant", "##Negative_Attraction_Constant_Input", &negative_attraction_constant, -10.0f, 10.0f, "%.2f");
 		ImGui::Text("Repulsion Constant");
-		ImGui::SliderFloat("##Repulsion_Constant", &repulsion_constant, -10.0f, 10.0f);
+		slider_with_input_float("##Repulsion_Constant", "##Repulsion_Constant_Input", &repulsion_constant, -10.0f, 10.0f, "%.2f");
 		ImGui::Text("Red Star Bloom Intensity");
-		ImGui::SliderFloat("##Red_Star_Bloom_Intensity", &red_bloom_intensity, 0.0f, 4.0f, "%.2f");
+		slider_with_input_float("##Red_Star_Bloom_Intensity", "##Red_Star_Bloom_Intensity_Input", &red_bloom_intensity, 0.0f, 4.0f, "%.2f");
 		ImGui::Text("Blue Star Bloom Intensity");
-		ImGui::SliderFloat("##Blue_Star_Bloom_Intensity", &blue_bloom_intensity, 0.0f, 4.0f, "%.2f");
+		slider_with_input_float("##Blue_Star_Bloom_Intensity", "##Blue_Star_Bloom_Intensity_Input", &blue_bloom_intensity, 0.0f, 4.0f, "%.2f");
 		ImGui::NewLine();
 
 		title("Real time settings");
@@ -428,17 +467,17 @@ void Menu::display()
 		ImGui::NewLine();
 
 		ImGui::Text("The time step duration");
-		ImGui::SliderFloat("##step", &step, 0.0001f, 0.1f, "%.4f", ImGuiSliderFlags_Logarithmic);
+		slider_with_input_float("##step", "##step_input", &step, 0.0001f, 0.1f, "%.4f", ImGuiSliderFlags_Logarithmic);
 
 		ImGui::NewLine();
 
 		ImGui::Text("The smoothing length");
-		ImGui::SliderFloat("##smoothing_length", &smoothing_length, 0.001f, 1.f, NULL, ImGuiSliderFlags_Logarithmic);
+		slider_with_input_float("##smoothing_length", "##smoothing_length_input", &smoothing_length, 0.001f, 1.f, NULL, ImGuiSliderFlags_Logarithmic);
 
 		ImGui::NewLine();
 
 		ImGui::Text("The interaction rate");
-		ImGui::SliderFloat("##interaction_rate", &interaction_rate, 0.001f, 1.f, "%.3f", ImGuiSliderFlags_Logarithmic);
+		slider_with_input_float("##interaction_rate", "##interaction_rate_input", &interaction_rate, 0.001f, 1.f, "%.3f", ImGuiSliderFlags_Logarithmic);
 
 		ImGui::NewLine();
 
@@ -453,18 +492,18 @@ void Menu::display()
 		if (matter_distribution == MatterDistribution::CoreHalo)
 		{
 			ImGui::Text("Positive core diameter");
-			ImGui::SliderFloat("##Type_Diameter", &type_diameter, 0.0f, galaxy_diameter);
+			slider_with_input_float("##Type_Diameter", "##Type_Diameter_Input", &type_diameter, 0.0f, galaxy_diameter);
 			ImGui::NewLine();
 
 			ImGui::Text("Extra negative density inside core");
-			ImGui::SliderFloat("##Core_Extra_Negative_Density", &core_extra_negative_density, 0.0f, 1.0f, "%.2f");
+			slider_with_input_float("##Core_Extra_Negative_Density", "##Core_Extra_Negative_Density_Input", &core_extra_negative_density, 0.0f, 1.0f, "%.2f");
 			ImGui::TextDisabled("0 = core fully positive, 1 = core fully negative");
 			ImGui::NewLine();
 		}
 		else if (matter_distribution == MatterDistribution::RandomMix)
 		{
 			ImGui::Text("Positive matter ratio");
-			ImGui::SliderFloat("##Positive_Ratio", &positive_ratio, 0.0f, 1.0f, "%.2f");
+			slider_with_input_float("##Positive_Ratio", "##Positive_Ratio_Input", &positive_ratio, 0.0f, 1.0f, "%.2f");
 			ImGui::NewLine();
 		}
 
