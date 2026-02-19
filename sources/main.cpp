@@ -225,7 +225,22 @@ static bool apply_config_kv(const ConfigKV& kv, BatchOptions& batch, bool* outpu
 	set_float("galaxy_diameter", Menu::galaxy_diameter);
 	set_float("galaxy_thickness", Menu::galaxy_thickness);
 	set_float("galaxies_distance", Menu::galaxies_distance);
-	set_float("stars_speed", Menu::stars_speed);
+	if (const std::string* v = get("stars_speed"))
+	{
+		float parsed = Menu::stars_speed;
+		if (to_float(*v, parsed))
+		{
+			Menu::stars_speed = parsed;
+			Menu::positive_stars_speed = parsed;
+			Menu::negative_stars_speed = parsed;
+		}
+	}
+	set_float("positive_stars_speed", Menu::positive_stars_speed);
+	set_float("negative_stars_speed", Menu::negative_stars_speed);
+	// Compatibility with older color naming for matter types.
+	set_float("blue_stars_speed", Menu::positive_stars_speed);
+	set_float("red_stars_speed", Menu::negative_stars_speed);
+	Menu::stars_speed = 0.5f * (Menu::positive_stars_speed + Menu::negative_stars_speed);
 	set_float("black_hole_mass", Menu::black_hole_mass);
 	set_float("negative_attraction_constant", Menu::negative_attraction_constant);
 	set_float("repulsion_constant", Menu::repulsion_constant);

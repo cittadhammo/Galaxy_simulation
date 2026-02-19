@@ -12,6 +12,11 @@ cl::Buffer 					Computer::types_buffer;
 cl::Buffer					Computer::negative_attraction_constant_buffer;
 cl::Buffer					Computer::repulsion_constant_buffer;
 
+static float initial_speed_for_star(const SimulationConfig& config, int star_type)
+{
+	return (star_type > 0) ? config.positive_stars_speed : config.negative_stars_speed;
+}
+
 dim::Vector3 Computer::random_sphere(const SimulationConfig& config)
 {
 	dim::Vector3 result = dim::Vector3::null;
@@ -31,7 +36,8 @@ void Computer::create_galaxy(int i, const SimulationConfig& config, SimulationSt
 {
 	state.positions[i].set_norm(static_cast<float>(pow(state.positions[i].get_norm() / (config.galaxy_diameter / 2.f), 5)) * (config.galaxy_diameter / 2.f));
 	state.positions[i].y *= config.galaxy_thickness / config.galaxy_diameter;
-	state.speeds[i] = dim::Vector4(dim::normalize(dim::Vector3(state.positions[i]) ^ dim::Vector3(0.f, 1.f, 0.f)) * config.stars_speed, 0.f);
+	const float initial_speed = initial_speed_for_star(config, state.star_types[i]);
+	state.speeds[i] = dim::Vector4(dim::normalize(dim::Vector3(state.positions[i]) ^ dim::Vector3(0.f, 1.f, 0.f)) * initial_speed, 0.f);
 }
 
 void Computer::create_collision(int i, const SimulationConfig& config, SimulationState& state)
@@ -52,8 +58,13 @@ void Computer::create_collision(int i, const SimulationConfig& config, Simulatio
 
 void Computer::create_universe(int i, const SimulationConfig& config, SimulationState& state)
 {
-	state.speeds[i] = state.positions[i];
-	state.speeds[i].set_norm((state.speeds[i].get_norm() / (config.galaxy_diameter / 2.f)) * config.stars_speed);
+	const dim::Vector3 radial = dim::Vector3(state.positions[i]);
+	const float distance = radial.get_norm();
+	const float radius = std::max(config.galaxy_diameter / 2.f, 0.0001f);
+	const float initial_speed = initial_speed_for_star(config, state.star_types[i]);
+	const float target_speed = (distance / radius) * initial_speed;
+	const dim::Vector3 direction = (distance > 0.0f) ? (radial / distance) : dim::Vector3::null;
+	state.speeds[i] = dim::Vector4(direction * target_speed, 0.0f);
 }
 
 void Computer::initialize_star_types_and_positions(

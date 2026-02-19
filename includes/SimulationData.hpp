@@ -14,6 +14,8 @@ struct SimulationConfig
 	float galaxy_thickness = 0.0f;
 	float galaxies_distance = 0.0f;
 	float stars_speed = 0.0f;
+	float positive_stars_speed = 0.0f;
+	float negative_stars_speed = 0.0f;
 	float black_hole_mass = 0.0f;
 };
 

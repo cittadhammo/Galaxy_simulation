@@ -48,6 +48,8 @@ public:
 	static float			galaxy_thickness;	// The thickness of the galaxy.
 	static float			galaxies_distance;	// The distance between the galaxies.
 	static float			stars_speed;		// The speed of the stars.
+	static float			positive_stars_speed;	// The speed of positive-mass stars.
+	static float			negative_stars_speed;	// The speed of negative-mass stars.
 	static float			black_hole_mass;	// The mass of the black hole.
 	static float			negative_attraction_constant;	// Multiplier for negative-negative attraction.
 	static float			repulsion_constant;				// Multiplier for opposite-type interaction.

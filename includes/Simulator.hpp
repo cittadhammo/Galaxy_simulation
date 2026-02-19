@@ -35,6 +35,8 @@ public:
 	static float				galaxy_thickness;	// The thickness of the galaxy.
 	static float				galaxies_distance;	// The distance between the galaxies.
 	static float				stars_speed;		// The initial speed of the stars.
+	static float				positive_stars_speed;	// The initial speed of positive-mass stars.
+	static float				negative_stars_speed;	// The initial speed of negative-mass stars.
 	static float				black_hole_mass;	// The mass of the black hole.
 	static SimulationConfig		config;				// Runtime simulation configuration.
 	static SimulationState		state;				// Runtime simulation state (stars).

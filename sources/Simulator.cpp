@@ -17,6 +17,8 @@ float				Simulator::galaxy_diameter;
 float				Simulator::galaxy_thickness;
 float				Simulator::galaxies_distance;
 float				Simulator::stars_speed;
+float				Simulator::positive_stars_speed;
+float				Simulator::negative_stars_speed;
 float				Simulator::black_hole_mass;
 SimulationConfig	Simulator::config;
 SimulationState		Simulator::state;
@@ -61,6 +63,8 @@ void Simulator::restart()
 	galaxy_thickness = Menu::galaxy_thickness;
 	galaxies_distance = Menu::galaxies_distance;
 	stars_speed = Menu::stars_speed;
+	positive_stars_speed = Menu::positive_stars_speed;
+	negative_stars_speed = Menu::negative_stars_speed;
 	black_hole_mass = Menu::black_hole_mass;
 	config.simulation_type = simulation_type;
 	config.step = step;
@@ -71,6 +75,8 @@ void Simulator::restart()
 	config.galaxy_thickness = galaxy_thickness;
 	config.galaxies_distance = galaxies_distance;
 	config.stars_speed = stars_speed;
+	config.positive_stars_speed = positive_stars_speed;
+	config.negative_stars_speed = negative_stars_speed;
 	config.black_hole_mass = black_hole_mass;
 
 	Computer::init(config, state);
@@ -119,6 +125,8 @@ std::string Simulator::configuration_line()
 		<< "galaxy_thickness=" << Menu::galaxy_thickness << " "
 		<< "galaxies_distance=" << Menu::galaxies_distance << " "
 		<< "stars_speed=" << Menu::stars_speed << " "
+		<< "positive_stars_speed=" << Menu::positive_stars_speed << " "
+		<< "negative_stars_speed=" << Menu::negative_stars_speed << " "
 		<< "black_hole_mass=" << Menu::black_hole_mass << " "
 		<< "negative_attraction_constant=" << Menu::negative_attraction_constant << " "
 		<< "repulsion_constant=" << Menu::repulsion_constant << " "

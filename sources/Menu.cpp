@@ -19,6 +19,8 @@ float			Menu::galaxy_diameter;
 float			Menu::galaxy_thickness;
 float			Menu::galaxies_distance;
 float			Menu::stars_speed;
+float			Menu::positive_stars_speed;
+float			Menu::negative_stars_speed;
 float			Menu::black_hole_mass;
 float			Menu::negative_attraction_constant = 1.0f;
 float			Menu::repulsion_constant = 1.0f;
@@ -178,6 +180,8 @@ void Menu::set_default_values()
 		galaxy_diameter		= 100.f;
 		galaxy_thickness	= 5.f;
 		stars_speed			= 20.f;
+		positive_stars_speed = stars_speed;
+		negative_stars_speed = stars_speed;
 		break;
 
 	case SimulationType::Collision:
@@ -186,6 +190,8 @@ void Menu::set_default_values()
 		galaxy_diameter		= 50.f;
 		galaxy_thickness	= 2.5f;
 		stars_speed			= 20.f;
+		positive_stars_speed = stars_speed;
+		negative_stars_speed = stars_speed;
 		break;
 
 	case SimulationType::Universe:
@@ -194,6 +200,8 @@ void Menu::set_default_values()
 		galaxy_diameter		= 10.f;
 		galaxy_thickness	= 10.f;
 		stars_speed			= 185.f;
+		positive_stars_speed = stars_speed;
+		negative_stars_speed = stars_speed;
 		break;
 
 	default:
@@ -218,8 +226,10 @@ void Menu::galaxy()
 
 	ImGui::NewLine();
 
-	ImGui::Text("The initial speed of the stars");
-	ImGui::SliderFloat("##stars_speed", &stars_speed, 0.f, 500.f, "%.1f");
+	ImGui::Text("Initial speed of positive-mass stars");
+	ImGui::SliderFloat("##positive_stars_speed", &positive_stars_speed, -500.f, 500.f, "%.1f");
+	ImGui::Text("Initial speed of negative-mass stars");
+	ImGui::SliderFloat("##negative_stars_speed", &negative_stars_speed, -500.f, 500.f, "%.1f");
 
 	ImGui::NewLine();
 
@@ -249,8 +259,10 @@ void Menu::collision()
 
 	ImGui::NewLine();
 
-	ImGui::Text("The initial speed of the stars");
-	ImGui::SliderFloat("##stars_speed", &stars_speed, 0.f, 500.f, "%.1f");
+	ImGui::Text("Initial speed of positive-mass stars");
+	ImGui::SliderFloat("##positive_stars_speed", &positive_stars_speed, -500.f, 500.f, "%.1f");
+	ImGui::Text("Initial speed of negative-mass stars");
+	ImGui::SliderFloat("##negative_stars_speed", &negative_stars_speed, -500.f, 500.f, "%.1f");
 }
 
 void Menu::universe()
@@ -265,8 +277,10 @@ void Menu::universe()
 
 	ImGui::NewLine();
 
-	ImGui::Text("The initial speed of the galaxies");
-	ImGui::SliderFloat("##stars_speed", &stars_speed, 0.f, 500.f, "%.1f");
+	ImGui::Text("Initial speed of positive-mass stars");
+	ImGui::SliderFloat("##positive_stars_speed", &positive_stars_speed, -500.f, 500.f, "%.1f");
+	ImGui::Text("Initial speed of negative-mass stars");
+	ImGui::SliderFloat("##negative_stars_speed", &negative_stars_speed, -500.f, 500.f, "%.1f");
 }
 
 void Menu::display()
@@ -461,6 +475,7 @@ void Menu::display()
 		case SimulationType::Universe: universe(); break;
 		default: break;
 		}
+		stars_speed = 0.5f * (positive_stars_speed + negative_stars_speed);
 
 		ImGui::NewLine();
 		ImGui::Separator();
