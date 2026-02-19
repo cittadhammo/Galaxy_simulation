@@ -7,6 +7,7 @@ SNAPSHOT_DIR="${ROOT_DIR}/outputs/checkpoint_snapshots"
 CAMERA_VIEW="top"
 POLL_INTERVAL=2
 HEADLESS=0
+BASE_CONFIG=""
 
 usage() {
   cat <<'EOF'
@@ -19,6 +20,8 @@ Options:
   --snapshot-dir <dir>           Output directory for PNG snapshots.
                                  Default: outputs/checkpoint_snapshots
   --camera <top|isometric>       Camera view for snapshot rendering (default: top)
+  --config <path>                Base simulation config used for rendering.
+                                 The worker keeps all values and overrides camera_view.
   --poll-interval <seconds>      Poll delay between scans (default: 2)
   --headless                     Run renderer via xvfb-run
   --help                         Show this help
@@ -42,6 +45,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --camera)
       CAMERA_VIEW="${2:-}"
+      shift 2
+      ;;
+    --config)
+      BASE_CONFIG="${2:-}"
       shift 2
       ;;
     --poll-interval)
@@ -71,7 +78,62 @@ fi
 
 mkdir -p "${SNAPSHOT_DIR}"
 CAMERA_CFG="${SNAPSHOT_DIR}/.worker_camera.cfg"
-echo "SIMCFG camera_view=${CAMERA_VIEW}" > "${CAMERA_CFG}"
+if [[ -n "${BASE_CONFIG}" && ! -f "${BASE_CONFIG}" ]]; then
+  echo "Error: --config file not found: ${BASE_CONFIG}" >&2
+  exit 1
+fi
+
+if [[ -n "${BASE_CONFIG}" ]]; then
+  awk -v cam="${CAMERA_VIEW}" '
+    {
+      line = $0
+      sub(/#.*/, "", line)
+      n = split(line, tokens, /[[:space:]]+/)
+      prefix = ""
+      out = ""
+      has_cfg = 0
+      has_camera = 0
+      for (i = 1; i <= n; ++i)
+      {
+        tok = tokens[i]
+        if (tok == "")
+          continue
+        if (tok == "SIMCFG" || tok == "BATCHCFG")
+        {
+          if (prefix == "")
+            prefix = tok
+          continue
+        }
+        eq = index(tok, "=")
+        if (eq <= 1 || eq >= length(tok))
+          continue
+        key = substr(tok, 1, eq - 1)
+        if (key == "camera_view")
+        {
+          tok = "camera_view=" cam
+          has_camera = 1
+        }
+        if (out != "")
+          out = out " "
+        out = out tok
+        has_cfg = 1
+      }
+      if (has_cfg)
+      {
+        if (!has_camera)
+          out = out " camera_view=" cam
+        if (prefix == "")
+          prefix = "SIMCFG"
+        print prefix " " out
+        exit
+      }
+    }
+  ' "${BASE_CONFIG}" > "${CAMERA_CFG}"
+fi
+
+if [[ ! -s "${CAMERA_CFG}" ]]; then
+  echo "SIMCFG camera_view=${CAMERA_VIEW}" > "${CAMERA_CFG}"
+fi
 
 if [[ ! -x "${ROOT_DIR}/build/Galaxy_simulation" ]]; then
   echo "Renderer executable not found, building first..."
@@ -86,6 +148,9 @@ fi
 echo "Watching checkpoints: ${STATE_GLOB}"
 echo "Writing snapshots:   ${SNAPSHOT_DIR}"
 echo "Camera view:         ${CAMERA_VIEW}"
+if [[ -n "${BASE_CONFIG}" ]]; then
+  echo "Base config:         ${BASE_CONFIG}"
+fi
 
 render_one() {
   local state_file="$1"

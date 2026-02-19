@@ -37,6 +37,7 @@ parse_physics_metadata() {
   local -n args_ref=$1
   STATE_OUT=""
   STATE_INTERVAL=0
+  CONFIG_PATH=""
 
   local i=0
   while [[ $i -lt ${#args_ref[@]} ]]; do
@@ -48,6 +49,11 @@ parse_physics_metadata() {
     fi
     if [[ "$arg" == "--state-interval" && $((i + 1)) -lt ${#args_ref[@]} ]]; then
       STATE_INTERVAL="${args_ref[$((i + 1))]}"
+      i=$((i + 2))
+      continue
+    fi
+    if [[ "$arg" == "--config" && $((i + 1)) -lt ${#args_ref[@]} ]]; then
+      CONFIG_PATH="${args_ref[$((i + 1))]}"
       i=$((i + 2))
       continue
     fi
@@ -128,6 +134,9 @@ WORKER_ARGS=(
 )
 if [[ "${WORKER_HEADLESS}" -eq 1 ]]; then
   WORKER_ARGS+=(--headless)
+fi
+if [[ -n "${CONFIG_PATH}" ]]; then
+  WORKER_ARGS+=(--config "${CONFIG_PATH}")
 fi
 
 echo "Starting checkpoint worker..."
