@@ -22,6 +22,8 @@ float			Menu::stars_speed;
 float			Menu::black_hole_mass;
 float			Menu::negative_attraction_constant = 1.0f;
 float			Menu::repulsion_constant = 1.0f;
+float			Menu::red_bloom_intensity = 1.0f;
+float			Menu::blue_bloom_intensity = 1.0f;
 float			Menu::type_diameter = 50.0f;
 MatterDistribution	Menu::matter_distribution = MatterDistribution::CoreHalo;
 float			Menu::positive_ratio = 0.5f;
@@ -159,6 +161,8 @@ void Menu::set_default_values()
 	black_hole_mass		= 1000.f;
 	negative_attraction_constant = 1.0f;
 	repulsion_constant = 1.0f;
+	red_bloom_intensity = 1.0f;
+	blue_bloom_intensity = 1.0f;
 	type_diameter = 50.0f;
 	matter_distribution = MatterDistribution::CoreHalo;
 	positive_ratio = 0.5f;
@@ -396,9 +400,13 @@ void Menu::display()
 
 		// Janus force multipliers (real-time).
 		ImGui::Text("Negative Attraction Constant");
-		ImGui::SliderFloat("##Negative_Attraction_Constant", &negative_attraction_constant, -3.0f, 3.0f);
+		ImGui::SliderFloat("##Negative_Attraction_Constant", &negative_attraction_constant, -10.0f, 10.0f);
 		ImGui::Text("Repulsion Constant");
-		ImGui::SliderFloat("##Repulsion_Constant", &repulsion_constant, -3.0f, 3.0f);
+		ImGui::SliderFloat("##Repulsion_Constant", &repulsion_constant, -10.0f, 10.0f);
+		ImGui::Text("Red Star Bloom Intensity");
+		ImGui::SliderFloat("##Red_Star_Bloom_Intensity", &red_bloom_intensity, 0.0f, 4.0f, "%.2f");
+		ImGui::Text("Blue Star Bloom Intensity");
+		ImGui::SliderFloat("##Blue_Star_Bloom_Intensity", &blue_bloom_intensity, 0.0f, 4.0f, "%.2f");
 		ImGui::NewLine();
 
 		title("Real time settings");

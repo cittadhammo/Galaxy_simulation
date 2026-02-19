@@ -122,6 +122,8 @@ std::string Simulator::configuration_line()
 		<< "black_hole_mass=" << Menu::black_hole_mass << " "
 		<< "negative_attraction_constant=" << Menu::negative_attraction_constant << " "
 		<< "repulsion_constant=" << Menu::repulsion_constant << " "
+		<< "red_bloom_intensity=" << Menu::red_bloom_intensity << " "
+		<< "blue_bloom_intensity=" << Menu::blue_bloom_intensity << " "
 		<< "matter_distribution=" << matter_distribution_name << " "
 		<< "type_diameter=" << Menu::type_diameter << " "
 		<< "positive_ratio=" << Menu::positive_ratio << " "

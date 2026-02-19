@@ -229,6 +229,8 @@ static bool apply_config_kv(const ConfigKV& kv, BatchOptions& batch, bool* outpu
 	set_float("black_hole_mass", Menu::black_hole_mass);
 	set_float("negative_attraction_constant", Menu::negative_attraction_constant);
 	set_float("repulsion_constant", Menu::repulsion_constant);
+	set_float("red_bloom_intensity", Menu::red_bloom_intensity);
+	set_float("blue_bloom_intensity", Menu::blue_bloom_intensity);
 	set_float("type_diameter", Menu::type_diameter);
 	set_float("positive_ratio", Menu::positive_ratio);
 	set_float("core_extra_negative_density", Menu::core_extra_negative_density);

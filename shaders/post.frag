@@ -7,6 +7,8 @@ out vec4 frag_color;
 
 uniform sampler2D u_galaxy;
 uniform sampler2D u_blur;
+uniform float u_red_bloom_intensity;
+uniform float u_blue_bloom_intensity;
 
 void main()
 {
@@ -14,6 +16,6 @@ void main()
     vec3 stars = galaxy_data.rgb;
     vec3 blur = texture(u_blur, v_texcoord).rgb;
     // Boost blue-channel bloom so positive stars get a glow comparable to negatives.
-    vec3 glow = vec3(0.20 * blur.r, 0.20 * blur.g, 0.22 * blur.b);
+    vec3 glow = vec3(0.20 * u_red_bloom_intensity * blur.r, 0.20 * blur.g, 0.22 * u_blue_bloom_intensity * blur.b);
     frag_color = vec4(0.7 * (stars + glow), 1.0);
 }

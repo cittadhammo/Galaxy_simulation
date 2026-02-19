@@ -51,6 +51,8 @@ public:
 	static float			black_hole_mass;	// The mass of the black hole.
 	static float			negative_attraction_constant;	// Multiplier for negative-negative attraction.
 	static float			repulsion_constant;				// Multiplier for opposite-type interaction.
+	static float			red_bloom_intensity;			// Multiplier for red-star bloom intensity.
+	static float			blue_bloom_intensity;			// Multiplier for blue-star bloom intensity.
 	static float			type_diameter;					// Diameter used by core/halo matter distribution.
 	static MatterDistribution matter_distribution;		// Initial positive/negative matter distribution model.
 	static float			positive_ratio;					// Positive matter ratio for random mix.

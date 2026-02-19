@@ -28,6 +28,8 @@ float			Menu::stars_speed = 20.f;
 float			Menu::black_hole_mass = 1000.f;
 float			Menu::negative_attraction_constant = 1.0f;
 float			Menu::repulsion_constant = 1.0f;
+float			Menu::red_bloom_intensity = 1.0f;
+float			Menu::blue_bloom_intensity = 1.0f;
 float			Menu::type_diameter = 50.0f;
 MatterDistribution Menu::matter_distribution = MatterDistribution::CoreHalo;
 float			Menu::positive_ratio = 0.5f;
@@ -41,6 +43,8 @@ static void set_default_values_headless()
 	Menu::black_hole_mass = 1000.f;
 	Menu::negative_attraction_constant = 1.0f;
 	Menu::repulsion_constant = 1.0f;
+	Menu::red_bloom_intensity = 1.0f;
+	Menu::blue_bloom_intensity = 1.0f;
 	Menu::type_diameter = 50.0f;
 	Menu::matter_distribution = MatterDistribution::CoreHalo;
 	Menu::positive_ratio = 0.5f;
@@ -212,6 +216,8 @@ static void apply_config_kv(const ConfigKV& kv, PhysicsOptions& options)
 	set_float("black_hole_mass", Menu::black_hole_mass);
 	set_float("negative_attraction_constant", Menu::negative_attraction_constant);
 	set_float("repulsion_constant", Menu::repulsion_constant);
+	set_float("red_bloom_intensity", Menu::red_bloom_intensity);
+	set_float("blue_bloom_intensity", Menu::blue_bloom_intensity);
 	set_float("type_diameter", Menu::type_diameter);
 	set_float("positive_ratio", Menu::positive_ratio);
 	set_float("core_extra_negative_density", Menu::core_extra_negative_density);

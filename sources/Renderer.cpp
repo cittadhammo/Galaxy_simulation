@@ -309,6 +309,8 @@ void Renderer::draw(const SimulationState& state)
                 // Render stars with star type information
                 dim::Shader::get("post").send_uniform("u_galaxy", galaxy_fbo_1.get_texture());
                 dim::Shader::get("post").send_uniform("u_blur", blur_fbo_2.get_texture());
+                dim::Shader::get("post").send_uniform("u_red_bloom_intensity", Menu::red_bloom_intensity);
+                dim::Shader::get("post").send_uniform("u_blue_bloom_intensity", Menu::blue_bloom_intensity);
                 post_vbo.draw();
 
             post_vbo.unbind();
