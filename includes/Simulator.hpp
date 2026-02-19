@@ -38,12 +38,13 @@ public:
 	static float				black_hole_mass;	// The mass of the black hole.
 	static SimulationConfig		config;				// Runtime simulation configuration.
 	static SimulationState		state;				// Runtime simulation state (stars).
+	static bool					renderer_enabled;	// True when renderer/window path is enabled.
 	static CameraView			camera_view;		// Camera view preset at startup/config load.
 
 	/**
 	 * @brief Initialize the simulation.
 	 */
-	static void init();
+	static void init(bool enable_renderer = true);
 
 	/**
 	 * @brief Restart the simulation.

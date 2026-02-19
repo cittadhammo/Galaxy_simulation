@@ -36,31 +36,54 @@ cl::Device ComputeShader::get_default_device()
 
 void ComputeShader::init(const std::string& path)
 {
-	// Select the first available device.
-	device = get_default_device();
-
 	// Read OpenCL kernel file as a string.
 	std::ifstream kernel_file(path);
 	std::string src(std::istreambuf_iterator<char>(kernel_file), (std::istreambuf_iterator<char>()));
-
-	// Compile kernel program which will run on the device.
 	cl::Program::Sources sources(1, std::make_pair(src.c_str(), src.length() + 1));
-	context = cl::Context(device);
-	program = cl::Program(context, sources);
 
-	auto err = program.build();
-	if(err != CL_BUILD_SUCCESS)
+	std::vector<cl::Platform> platforms;
+	cl::Platform::get(&platforms);
+	if (platforms.empty())
 	{
-		std::cerr << "Error!\nBuild Status: " << program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(device)
-			<< "\nBuild Log:\t " << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device) << std::endl;
+		std::cerr << "No platforms found!" << std::endl;
 		exit(1);
 	}
 
-	//std::vector<::size_t> maxWorkItems;
-	//maxWorkItems = device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>();
-	//std::cout << maxWorkItems[0] << " " << maxWorkItems[1] << " " << maxWorkItems[2] << std::endl;
+	std::string errors;
+	for (const cl::Platform& platform : platforms)
+	{
+		std::vector<cl::Device> devices;
+		platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);
+		for (const cl::Device& candidate : devices)
+		{
+			try
+			{
+				cl::Context test_context(candidate);
+				cl::Program test_program(test_context, sources);
+				const cl_int build_result = test_program.build();
+				if (build_result == CL_BUILD_SUCCESS)
+				{
+					device = candidate;
+					context = test_context;
+					program = test_program;
+					queue = cl::CommandQueue(context, device);
+					return;
+				}
 
-	queue = cl::CommandQueue(context, device);
+				errors += "Device: " + candidate.getInfo<CL_DEVICE_NAME>() + "\n";
+				errors += "Build Status: " + std::to_string(test_program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(candidate)) + "\n";
+				errors += "Build Log:\n" + test_program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(candidate) + "\n";
+			}
+			catch (...)
+			{
+				errors += "Device: " + candidate.getInfo<CL_DEVICE_NAME>() + "\n";
+				errors += "OpenCL error: exception during context/program setup\n";
+			}
+		}
+	}
+
+	std::cerr << "Error: failed to build compute program on all devices.\n" << errors << std::endl;
+	exit(1);
 }
 
 void ComputeShader::launch(const std::string& function, const std::vector<cl::Buffer*>& buffers, const cl::NDRange& global, const cl::NDRange& local)

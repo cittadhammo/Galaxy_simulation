@@ -27,6 +27,8 @@ This repository contains the source code of an n-body type simulation using GPU 
 * **[📋 Summary](#-summary)**
 * **[🎥 Video](#-video)**
 * **[✨ Features](#-features)**
+* **[🏗️ Architecture](#%EF%B8%8F-architecture)**
+* **[📘 Beginner Guide](#-beginner-guide)**
 * **[🐧 Build on Linux](#-build-on-linux)**
 * **[🛠️ Install](#%EF%B8%8F-install)**
 	* [📦 Dependencies](#-dependencies)
@@ -74,6 +76,47 @@ Here is a video explaining how the algorithm works : [<u>**Simuler 1 000 000 de 
 <p align="center">
 	<img src="https://raw.githubusercontent.com/angeluriot/Galaxy_simulation/master/resources/misc/galaxy_4.png" width="500">
 </p>
+
+<br/>
+
+# 🏗️ Architecture
+
+The project now has two runtime paths:
+
+* `Galaxy_simulation` (existing app):
+  * OpenGL renderer + UI
+  * interactive and batch snapshot export
+* `Galaxy_physics` (new executable):
+  * physics-only compute loop
+  * no rendering/window loop in the app flow
+  * optional state file export for downstream rendering/replay
+
+Current refactor status:
+
+* Introduced internal boundaries:
+  * `SimulationConfig`: simulation parameters
+  * `SimulationState`: star arrays (`positions`, `speeds`, `accelerations`, `star_types`)
+* `Computer` now computes from `SimulationConfig` + `SimulationState`.
+* `Renderer` now reads from `SimulationState`.
+* Full real-time network streaming (VM physics -> local renderer) is not implemented yet.
+
+<br/>
+
+# 📘 Beginner Guide
+
+If you are new to cloud VMs and this split setup, read:
+
+* [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+* [`docs/VM_CHECKLIST.md`](docs/VM_CHECKLIST.md)
+
+It explains:
+
+* what each executable does
+* exact copy/paste commands for first VM setup
+* how to run physics remotely
+* how to copy results back locally
+* common errors and fixes
+* command-only VM checklist (copy/paste)
 
 <br/>
 
@@ -152,6 +195,8 @@ bash unix_run.sh
 
 ## 🚀 Run
 
+Interactive renderer app:
+
 ```bash
 ./build/Galaxy_simulation
 ```
@@ -193,6 +238,41 @@ bash run_batch.sh
 ```
 
 If `batch_jobs.cfg` exists at repository root, `run_batch.sh` uses it automatically.
+
+Physics-only executable:
+
+```bash
+./build/Galaxy_physics --steps 2000
+```
+
+Shortcut:
+
+```bash
+bash run_physics.sh --steps 2000
+```
+
+Load simulation parameters from one config line:
+
+```bash
+bash run_physics.sh --config simulation.cfg --steps 5000
+```
+
+Export final state to a binary file:
+
+```bash
+bash run_physics.sh --steps 5000 --state-out outputs/physics_state.bin
+```
+
+State file format (`--state-out`):
+
+* header:
+  * `magic` (`uint32`) = `0x47414C58` (`GALX`)
+  * `version` (`uint32`) = `1`
+  * `nb_stars` (`uint32`)
+* payload (packed, in this order):
+  * `positions[nb_stars]` as `dim::Vector4`
+  * `speeds[nb_stars]` as `dim::Vector4`
+  * `star_types[nb_stars]` as `int`
 
 ## ⚙️ Janus + Performance Update
 
@@ -314,10 +394,16 @@ Notes:
 
 For remote runs when your local machine is limited:
 
-* setup VM dependencies + build: `bash cloud/setup_ubuntu_vm.sh`
-* run interactive mode over VNC: `VNC_PASSWORD='change_me' bash cloud/start_live_vnc.sh`
-* run headless batch: `bash cloud/run_headless_batch.sh --batch-config batch_configs/example.batchcfg`
-* run queued batch files: `bash cloud/process_batch_queue.sh`
+1. Setup VM dependencies + build:
+   * `bash cloud/setup_ubuntu_vm.sh`
+2. Physics-only run on VM (no renderer loop):
+   * `bash run_physics.sh --config simulation.cfg --steps 10000 --state-out outputs/vm_state.bin`
+3. Transfer output back locally:
+   * `scp ubuntu@<vm-ip>:~/Galaxy_simulation/outputs/vm_state.bin ./outputs/`
+4. Existing remote-render options are still available:
+   * interactive mode over VNC: `VNC_PASSWORD='change_me' bash cloud/start_live_vnc.sh`
+   * headless batch snapshot export via Xvfb: `bash cloud/run_headless_batch.sh --batch-config batch_configs/example.batchcfg`
+   * queued batch files: `bash cloud/process_batch_queue.sh`
 
 Full guide: [`cloud/README.md`](cloud/README.md)
 
@@ -333,6 +419,11 @@ Detailed change log: see [`CHANGE.md`](CHANGE.md).
   On Arch Linux:
   `sudo pacman -S --needed pocl` (CPU fallback) or install the NVIDIA-matching OpenCL package (for example `opencl-nvidia-580xx` for 580xx drivers).
   Verify with `clinfo`: `Number of platforms` must be at least `1`.
+* `Error: failed to build compute program on all devices` / `Build Status: -2`:
+  * OpenCL platform exists, but kernel compilation failed on available devices.
+  * verify with `clinfo` that the intended device is visible
+  * on Linux, install/update the vendor OpenCL runtime (NVIDIA/AMD/Intel) or use `pocl` as fallback
+  * keep a CPU OpenCL ICD installed on cloud VMs without GPU
 * `Failed to open X11 display`: run from a desktop session with a valid `DISPLAY` variable.
 
 <br/>

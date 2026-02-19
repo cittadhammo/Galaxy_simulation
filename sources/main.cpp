@@ -36,6 +36,7 @@ void print_opengl_info()
 struct BatchOptions
 {
 	bool enabled = false;
+	bool physics_only = false;
 	int steps = 0;
 	int snapshots = 3;
 	std::string output_dir = "outputs";
@@ -77,6 +78,8 @@ static BatchOptions parse_args(int argc, char** argv)
 			options.config_path = argv[++i];
 		else if (arg == "--batch-config" && i + 1 < argc)
 			options.batch_config_path = argv[++i];
+		else if (arg == "--physics-only")
+			options.physics_only = true;
 	}
 
 	return options;
@@ -315,16 +318,36 @@ static int run_batch_mode(const BatchOptions& options, bool close_window)
 	return EXIT_SUCCESS;
 }
 
+static int run_physics_only_mode(const BatchOptions& options)
+{
+	const int steps = options.enabled ? options.steps : 2000;
+	std::cout << "Running physics-only mode for " << steps << " steps..." << std::endl;
+
+	Menu::pause = false;
+	for (int i = 0; i < steps; ++i)
+	{
+		Simulator::menu_update();
+		Computer::compute(Simulator::config, Simulator::state);
+	}
+
+	std::cout << "Physics-only run complete." << std::endl;
+	return EXIT_SUCCESS;
+}
+
 int main(int argc, char** argv)
 {
 	const BatchOptions batch_options = parse_args(argc, argv);
 	BatchOptions mutable_batch_options = batch_options;
 
-	dim::Window::open("Galaxy simulation", 0.75f, "resources/icons/icon.png");
-	Simulator::init();
+	if (!mutable_batch_options.physics_only)
+		dim::Window::open("Galaxy simulation", 0.75f, "resources/icons/icon.png");
+	Simulator::init(!mutable_batch_options.physics_only);
 
-	// Print OpenGL context information
-    print_opengl_info();
+	if (!mutable_batch_options.physics_only)
+	{
+		// Print OpenGL context information
+		print_opengl_info();
+	}
 
 	if (!mutable_batch_options.config_path.empty())
 	{
@@ -366,13 +389,22 @@ int main(int argc, char** argv)
 
 			std::cout << "[Batch] Job " << (i + 1) << "/" << jobs.size() << std::endl;
 			Simulator::restart();
-			Simulator::apply_camera_view();
-			run_batch_mode(job_options, false);
+			if (!mutable_batch_options.physics_only)
+			{
+				Simulator::apply_camera_view();
+				run_batch_mode(job_options, false);
+			}
+			else
+				run_physics_only_mode(job_options);
 		}
 
-		dim::Window::close();
+		if (!mutable_batch_options.physics_only)
+			dim::Window::close();
 		return EXIT_SUCCESS;
 	}
+
+	if (mutable_batch_options.physics_only)
+		return run_physics_only_mode(mutable_batch_options);
 
 	if (mutable_batch_options.enabled)
 		return run_batch_mode(mutable_batch_options, true);

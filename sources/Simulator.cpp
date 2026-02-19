@@ -19,19 +19,24 @@ float				Simulator::stars_speed;
 float				Simulator::black_hole_mass;
 SimulationConfig	Simulator::config;
 SimulationState		Simulator::state;
+bool				Simulator::renderer_enabled = true;
 Simulator::CameraView Simulator::camera_view = Simulator::CameraView::Isometric;
 
-void Simulator::init()
+void Simulator::init(bool enable_renderer)
 {
-	dim::PerspectiveCamera cam(45.f, 1.f, 10000.f);
-	cam.set_position(dim::Vector3(0.f, 0.f, 130.f));
-	dim::Window::set_camera(cam);
-	apply_camera_view();
-	dim::Window::set_controller(dim::OrbitController(dim::Vector3::null, dim::OrbitController::default_sensitivity, 2.f));
+	renderer_enabled = enable_renderer;
+	if (renderer_enabled)
+	{
+		dim::PerspectiveCamera cam(45.f, 1.f, 10000.f);
+		cam.set_position(dim::Vector3(0.f, 0.f, 130.f));
+		dim::Window::set_camera(cam);
+		apply_camera_view();
+		dim::Window::set_controller(dim::OrbitController(dim::Vector3::null, dim::OrbitController::default_sensitivity, 2.f));
 
-	dim::Shader::add("galaxy", "shaders/galaxy.vert", "shaders/galaxy.frag");
-	dim::Shader::add("blur", "shaders/blur.vert", "shaders/blur.frag");
-	dim::Shader::add("post", "shaders/post.vert", "shaders/post.frag");
+		dim::Shader::add("galaxy", "shaders/galaxy.vert", "shaders/galaxy.frag");
+		dim::Shader::add("blur", "shaders/blur.vert", "shaders/blur.frag");
+		dim::Shader::add("post", "shaders/post.vert", "shaders/post.frag");
+	}
 
 	ComputeShader::init("shaders/compute/cl_compute_shader.cl");
 	Menu::set_default_values();
@@ -62,7 +67,8 @@ void Simulator::restart()
 	config.black_hole_mass = black_hole_mass;
 
 	Computer::init(config, state);
-	Renderer::init(state);
+	if (renderer_enabled)
+		Renderer::init(state);
 	print_configuration();
 
 	computation_done = false;
