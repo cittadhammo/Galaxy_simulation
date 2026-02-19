@@ -1,4 +1,5 @@
 #include "Simulator.hpp"
+#include <dim/controllers/OrbitController.hpp>
 #include <iostream>
 #include <sstream>
 #include <iomanip>
@@ -30,12 +31,18 @@ void Simulator::init(bool enable_renderer)
 		dim::PerspectiveCamera cam(45.f, 1.f, 10000.f);
 		cam.set_position(dim::Vector3(0.f, 0.f, 130.f));
 		dim::Window::set_camera(cam);
-		apply_camera_view();
 		dim::Window::set_controller(dim::OrbitController(dim::Vector3::null, dim::OrbitController::default_sensitivity, 2.f));
+		{
+			dim::Controller& controller = dim::Window::get_controller();
+			if (controller.get_type() == dim::Controller::Type::Orbit)
+				static_cast<dim::OrbitController&>(controller).set_pan_multiplier(Menu::camera_pan_speed);
+		}
+		apply_camera_view();
 
 		dim::Shader::add("galaxy", "shaders/galaxy.vert", "shaders/galaxy.frag");
 		dim::Shader::add("blur", "shaders/blur.vert", "shaders/blur.frag");
 		dim::Shader::add("post", "shaders/post.vert", "shaders/post.frag");
+		dim::Shader::add("ruler", "shaders/ruler.vert", "shaders/ruler.frag");
 	}
 
 	ComputeShader::init("shaders/compute/cl_compute_shader.cl");
@@ -187,14 +194,21 @@ void Simulator::apply_camera_view()
 {
 	dim::Camera& camera = dim::Window::get_camera();
 	const float radius = std::max(1.0f, camera.get_position().get_norm());
+	dim::Vector3 center = dim::Vector3::null;
+	dim::Controller& controller = dim::Window::get_controller();
+	if (controller.get_type() == dim::Controller::Type::Orbit)
+	{
+		dim::OrbitController& orbit = static_cast<dim::OrbitController&>(controller);
+		center = orbit.get_center();
+	}
 
 	switch (camera_view)
 	{
 	case CameraView::Top:
 	{
-		const dim::Vector3 position(0.0f, radius, 0.001f);
+		const dim::Vector3 position = center + dim::Vector3(0.0f, radius, 0.001f);
 		camera.set_position(position);
-		camera.set_direction(-position);
+		camera.set_direction(center - position);
 		break;
 	}
 
@@ -203,8 +217,9 @@ void Simulator::apply_camera_view()
 	{
 		dim::Vector3 position(0.f, 0.f, radius);
 		position.set_phi(dim::pi / 3.f);
+		position += center;
 		camera.set_position(position);
-		camera.set_direction(-position);
+		camera.set_direction(center - position);
 		break;
 	}
 	}

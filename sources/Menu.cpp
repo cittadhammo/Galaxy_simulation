@@ -1,8 +1,11 @@
 #include "Menu.hpp"
 #include "Simulator.hpp"
+#include <dim/controllers/OrbitController.hpp>
 #include <filesystem>
 #include <fstream>
 #include <exception>
+#include <limits>
+#include <cmath>
 
 bool			Menu::visible			= true;
 bool			Menu::active			= false;
@@ -23,6 +26,91 @@ float			Menu::type_diameter = 50.0f;
 MatterDistribution	Menu::matter_distribution = MatterDistribution::CoreHalo;
 float			Menu::positive_ratio = 0.5f;
 float			Menu::core_extra_negative_density = 0.0f;
+float			Menu::camera_pan_speed = 16.0f;
+bool			Menu::measurement_enabled = false;
+Menu::MeasurementAxis Menu::measurement_axis = Menu::MeasurementAxis::X;
+float			Menu::measurement_marker_a = -50.0f;
+float			Menu::measurement_marker_b = 50.0f;
+float			Menu::measurement_axis_min = -100.0f;
+float			Menu::measurement_axis_max = 100.0f;
+dim::Vector3		Menu::measurement_center = dim::Vector3::null;
+float			Menu::measurement_tick_size = 5.0f;
+bool			Menu::measurement_auto_bounds = true;
+float			Menu::measurement_value = 100.0f;
+
+static bool refresh_measurement_bounds(bool preserve_marker_positions)
+{
+	const SimulationState& state = Simulator::state;
+	if (state.positions.empty())
+		return false;
+
+	float min_x = std::numeric_limits<float>::max();
+	float min_y = std::numeric_limits<float>::max();
+	float min_z = std::numeric_limits<float>::max();
+	float max_x = std::numeric_limits<float>::lowest();
+	float max_y = std::numeric_limits<float>::lowest();
+	float max_z = std::numeric_limits<float>::lowest();
+
+	for (const dim::Vector4& p : state.positions)
+	{
+		min_x = std::min(min_x, p.x);
+		min_y = std::min(min_y, p.y);
+		min_z = std::min(min_z, p.z);
+		max_x = std::max(max_x, p.x);
+		max_y = std::max(max_y, p.y);
+		max_z = std::max(max_z, p.z);
+	}
+
+	Menu::measurement_center = dim::Vector3(
+		0.5f * (min_x + max_x),
+		0.5f * (min_y + max_y),
+		0.5f * (min_z + max_z));
+
+	const float span_x = std::max(0.001f, max_x - min_x);
+	const float span_y = std::max(0.001f, max_y - min_y);
+	const float span_z = std::max(0.001f, max_z - min_z);
+	const float diagonal = std::sqrt(span_x * span_x + span_y * span_y + span_z * span_z);
+	Menu::measurement_tick_size = std::max(0.5f, diagonal * 0.02f);
+
+	const float previous_min = Menu::measurement_axis_min;
+	const float previous_max = Menu::measurement_axis_max;
+	float new_min = min_x;
+	float new_max = max_x;
+
+	switch (Menu::measurement_axis)
+	{
+	case Menu::MeasurementAxis::Y:
+		new_min = min_y;
+		new_max = max_y;
+		break;
+	case Menu::MeasurementAxis::Z:
+		new_min = min_z;
+		new_max = max_z;
+		break;
+	case Menu::MeasurementAxis::X:
+	default:
+		new_min = min_x;
+		new_max = max_x;
+		break;
+	}
+
+	Menu::measurement_axis_min = new_min;
+	Menu::measurement_axis_max = new_max;
+
+	if (!preserve_marker_positions || previous_max <= previous_min)
+	{
+		Menu::measurement_marker_a = new_min;
+		Menu::measurement_marker_b = new_max;
+	}
+	else
+	{
+		Menu::measurement_marker_a = std::clamp(Menu::measurement_marker_a, new_min, new_max);
+		Menu::measurement_marker_b = std::clamp(Menu::measurement_marker_b, new_min, new_max);
+	}
+
+	Menu::measurement_value = std::fabs(Menu::measurement_marker_b - Menu::measurement_marker_a);
+	return true;
+}
 
 
 void Menu::check_events(const sf::Event& sf_event)
@@ -75,6 +163,7 @@ void Menu::set_default_values()
 	matter_distribution = MatterDistribution::CoreHalo;
 	positive_ratio = 0.5f;
 	core_extra_negative_density = 0.0f;
+	camera_pan_speed = 16.0f;
 
 
 	switch (simulation_type)
@@ -181,6 +270,8 @@ void Menu::display()
 	static std::string pause_button = "Pause";
 	static char config_output_path[256] = "batch_configs/user.batchcfg";
 	static std::string config_output_status;
+	static MeasurementAxis previous_measurement_axis = measurement_axis;
+	static int measurement_refresh_counter = 0;
 
 	if (visible)
 	{
@@ -192,7 +283,7 @@ void Menu::display()
 		SimulationType temp = simulation_type;
 
 		ImGui::Text("The type of simulation");
-		ImGui::Combo("##simulation_type", reinterpret_cast<int*>(&simulation_type), "Galaxy\0Collision\0Universe");
+		ImGui::Combo("##simulation_type", reinterpret_cast<int*>(&simulation_type), "Galaxy\0Collision\0Universe\0");
 
 		if (simulation_type != temp)
 		{
@@ -203,9 +294,104 @@ void Menu::display()
 
 		Simulator::CameraView previous_camera_view = Simulator::camera_view;
 		ImGui::Text("Camera view");
-		ImGui::Combo("##camera_view", reinterpret_cast<int*>(&Simulator::camera_view), "Isometric\0Top");
+		ImGui::Combo("##camera_view", reinterpret_cast<int*>(&Simulator::camera_view), "Isometric\0Top\0");
 		if (Simulator::camera_view != previous_camera_view)
 			Simulator::apply_camera_view();
+		ImGui::Text("Quick view");
+		if (ImGui::Button("Top"))
+		{
+			Simulator::camera_view = Simulator::CameraView::Top;
+			Simulator::apply_camera_view();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Front"))
+		{
+			dim::Camera& camera = dim::Window::get_camera();
+			const float radius = std::max(1.0f, camera.get_position().get_norm());
+			dim::Vector3 center = dim::Vector3::null;
+			dim::Controller& controller = dim::Window::get_controller();
+			if (controller.get_type() == dim::Controller::Type::Orbit)
+			{
+				dim::OrbitController& orbit = static_cast<dim::OrbitController&>(controller);
+				center = orbit.get_center();
+			}
+			const dim::Vector3 position = center + dim::Vector3(0.0f, 0.0f, radius);
+			camera.set_position(position);
+			camera.set_direction(center - position);
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Iso"))
+		{
+			Simulator::camera_view = Simulator::CameraView::Isometric;
+			Simulator::apply_camera_view();
+		}
+		if (ImGui::Button("Reset orbit center"))
+		{
+			dim::Controller& controller = dim::Window::get_controller();
+			if (controller.get_type() == dim::Controller::Type::Orbit)
+			{
+				dim::OrbitController& orbit = static_cast<dim::OrbitController&>(controller);
+				orbit.set_center(dim::Vector3::null);
+			}
+		}
+		ImGui::Text("Pan speed");
+		ImGui::SliderFloat("##camera_pan_speed", &camera_pan_speed, 0.1f, 20.0f, "%.2f");
+		{
+			dim::Controller& controller = dim::Window::get_controller();
+			if (controller.get_type() == dim::Controller::Type::Orbit)
+			{
+				dim::OrbitController& orbit = static_cast<dim::OrbitController&>(controller);
+				orbit.set_pan_multiplier(camera_pan_speed);
+			}
+		}
+		ImGui::NewLine();
+
+		title("Measurement Tool");
+
+		ImGui::TextWrapped("Measure distances in simulation units (same units as positions in .bin state files).");
+		ImGui::Checkbox("Show ruler in scene", &measurement_enabled);
+		ImGui::Checkbox("Auto-fit ruler bounds to current state", &measurement_auto_bounds);
+		ImGui::TextDisabled("Auto-fit keeps axis min/max synced with particle extents.");
+
+		if (ImGui::Button("Refresh bounds now"))
+		{
+			refresh_measurement_bounds(true);
+			measurement_refresh_counter = 30;
+		}
+
+		if (measurement_auto_bounds && measurement_refresh_counter <= 0)
+		{
+			refresh_measurement_bounds(true);
+			measurement_refresh_counter = 30;
+		}
+		else
+			measurement_refresh_counter = std::max(0, measurement_refresh_counter - 1);
+
+		ImGui::Text("Axis");
+		ImGui::Combo("##measurement_axis", reinterpret_cast<int*>(&measurement_axis), "X\0Y\0Z\0");
+		if (measurement_axis != previous_measurement_axis)
+		{
+			refresh_measurement_bounds(false);
+			previous_measurement_axis = measurement_axis;
+		}
+
+		if (ImGui::Button("Set markers to axis min/max"))
+		{
+			measurement_marker_a = measurement_axis_min;
+			measurement_marker_b = measurement_axis_max;
+		}
+
+		if (measurement_axis_max <= measurement_axis_min)
+			measurement_axis_max = measurement_axis_min + 0.001f;
+
+		ImGui::Text("Marker A position");
+		ImGui::SliderFloat("##measurement_marker_a", &measurement_marker_a, measurement_axis_min, measurement_axis_max, "%.3f");
+		ImGui::Text("Marker B position");
+		ImGui::SliderFloat("##measurement_marker_b", &measurement_marker_b, measurement_axis_min, measurement_axis_max, "%.3f");
+		measurement_value = std::fabs(measurement_marker_b - measurement_marker_a);
+		ImGui::Text("Distance |A-B| = %.4f sim units", measurement_value);
+		ImGui::Text("Axis bounds: [%.3f, %.3f]", measurement_axis_min, measurement_axis_max);
+
 		ImGui::NewLine();
 
 		// Janus force multipliers (real-time).
@@ -239,7 +425,7 @@ void Menu::display()
 		ImGui::NewLine();
 
 		ImGui::Text("Matter distribution");
-		ImGui::Combo("##matter_distribution", reinterpret_cast<int*>(&matter_distribution), "Core + halo\0Random mix\0Split on X\0");
+		ImGui::Combo("##matter_distribution", reinterpret_cast<int*>(&matter_distribution), "Core + halo\0Random mix\0Split on X\0\0");
 		ImGui::NewLine();
 
 		if (matter_distribution == MatterDistribution::CoreHalo)

@@ -19,6 +19,8 @@ public:
 	static dim::FrameBuffer		galaxy_fbo_2;	// The FBO of the stars to be blured.
 	static dim::FrameBuffer		blur_fbo_1;		// The FBO of the first step of the blur.
 	static dim::FrameBuffer		blur_fbo_2;		// The FBO of the second step of the blur.
+	static GLuint				ruler_vbo;		// The VBO of the measurement ruler.
+	static GLuint				ruler_vao;		// The VAO of the measurement ruler.
 
 	/**
 	 * @brief Create the OpenGL vertex buffer object.

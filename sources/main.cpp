@@ -532,7 +532,8 @@ int main(int argc, char** argv)
 			Simulator::check_events(sf_event);
 		}
 
-		dim::Window::get_controller().enable(!Menu::active || !Menu::visible, dim::Controller::Action::Look);
+		const bool ui_captures_mouse = Menu::visible && (Menu::active || ImGui::GetIO().WantCaptureMouse);
+		dim::Window::get_controller().enable(!ui_captures_mouse, dim::Controller::Action::All);
 
 		dim::Window::clear(dim::Color::black);
 		dim::Window::update();

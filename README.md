@@ -210,6 +210,19 @@ bash run_sim.sh
 `run_sim.sh` loads `simulation.cfg` automatically when no extra arguments are passed.  
 Set `camera_view=top` in `simulation.cfg` for top-down startup.
 
+Units note:
+
+* Distances and sizes are in simulation units (dimensionless internal units).
+* They are consistent within one run/config and across saved `.bin` files.
+* Use them for relative/comparative measurements (for example core size vs halo size), not real-world SI mapping.
+
+Built-in measurement tool:
+
+* Open the menu (`F1`) and go to `Measurement Tool`.
+* Enable `ruler overlay`, choose axis (`X`, `Y`, `Z`), then move Marker `A` and `B`.
+* The UI shows `Distance |A-B|` in simulation units.
+* Works during paused simulation and when replaying a loaded `--state-in` file.
+
 ### 2) Batch Snapshot Export
 
 Compute then export snapshots from multiple angles:

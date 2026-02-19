@@ -29,6 +29,12 @@ enum class MatterDistribution : int
 class Menu
 {
 public:
+	enum class MeasurementAxis : int
+	{
+		X = 0,
+		Y = 1,
+		Z = 2
+	};
 
 	static bool				visible;			// True if the menu is visible, false otherwise.
 	static bool				active;				// True if you clicked on the menu, false otherwise.
@@ -49,6 +55,17 @@ public:
 	static MatterDistribution matter_distribution;		// Initial positive/negative matter distribution model.
 	static float			positive_ratio;					// Positive matter ratio for random mix.
 	static float			core_extra_negative_density;	// Extra negative density injected inside the core.
+	static float			camera_pan_speed;				// Pan speed multiplier for orbit controller.
+	static bool				measurement_enabled;			// Show measurement ruler overlay.
+	static MeasurementAxis	measurement_axis;				// Active measurement axis.
+	static float			measurement_marker_a;			// First marker position on axis.
+	static float			measurement_marker_b;			// Second marker position on axis.
+	static float			measurement_axis_min;			// Current axis min bound.
+	static float			measurement_axis_max;			// Current axis max bound.
+	static dim::Vector3		measurement_center;				// Center point used for ruler placement.
+	static float			measurement_tick_size;			// Tick size used by renderer.
+	static bool				measurement_auto_bounds;		// Auto-refresh state bounds while menu is visible.
+	static float			measurement_value;				// Absolute distance between markers.
 
 	/**
 	 * @brief Handle the events of the menu.
