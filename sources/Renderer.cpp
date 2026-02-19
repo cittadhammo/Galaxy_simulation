@@ -10,7 +10,7 @@ dim::FrameBuffer	Renderer::galaxy_fbo_2;
 dim::FrameBuffer	Renderer::blur_fbo_1;
 dim::FrameBuffer	Renderer::blur_fbo_2;
 
-void Renderer::init_vbo()
+void Renderer::init_vbo(const SimulationState& state)
 {
     // Delete buffers
     glDeleteBuffers(1, &vbo);
@@ -20,21 +20,21 @@ void Renderer::init_vbo()
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
-    GLsizeiptr positions_size = Computer::positions.size() * sizeof(dim::Vector4);
-    GLsizeiptr speeds_size = Computer::speeds.size() * sizeof(dim::Vector4);
-    GLsizeiptr types_size = Computer::star_types.size() * sizeof(int);
+    GLsizeiptr positions_size = state.positions.size() * sizeof(dim::Vector4);
+    GLsizeiptr speeds_size = state.speeds.size() * sizeof(dim::Vector4);
+    GLsizeiptr types_size = state.star_types.size() * sizeof(int);
 
     // Allocate one packed buffer: positions, speeds, star types.
     glBufferData(GL_ARRAY_BUFFER, positions_size + speeds_size + types_size, NULL, GL_DYNAMIC_DRAW);
 
     // Update positions
-    glBufferSubData(GL_ARRAY_BUFFER, 0, positions_size, Computer::positions.data());
+    glBufferSubData(GL_ARRAY_BUFFER, 0, positions_size, state.positions.data());
 
     // Update speeds
-    glBufferSubData(GL_ARRAY_BUFFER, positions_size, speeds_size, Computer::speeds.data());
+    glBufferSubData(GL_ARRAY_BUFFER, positions_size, speeds_size, state.speeds.data());
 
     // Update star types
-    glBufferSubData(GL_ARRAY_BUFFER, positions_size + speeds_size, types_size, Computer::star_types.data());
+    glBufferSubData(GL_ARRAY_BUFFER, positions_size + speeds_size, types_size, state.star_types.data());
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
@@ -59,25 +59,25 @@ void Renderer::init_vbo()
     glBindVertexArray(0);
 }
 
-void Renderer::update_vbo()
+void Renderer::update_vbo(const SimulationState& state)
 {
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
-    GLsizeiptr positions_size = Computer::positions.size() * sizeof(dim::Vector4);
-    GLsizeiptr speeds_size = Computer::speeds.size() * sizeof(dim::Vector4);
+    GLsizeiptr positions_size = state.positions.size() * sizeof(dim::Vector4);
+    GLsizeiptr speeds_size = state.speeds.size() * sizeof(dim::Vector4);
 
     // Update positions
-    glBufferSubData(GL_ARRAY_BUFFER, 0, positions_size, Computer::positions.data());
+    glBufferSubData(GL_ARRAY_BUFFER, 0, positions_size, state.positions.data());
 
     // Update speeds
-    glBufferSubData(GL_ARRAY_BUFFER, positions_size, speeds_size, Computer::speeds.data());
+    glBufferSubData(GL_ARRAY_BUFFER, positions_size, speeds_size, state.speeds.data());
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-void Renderer::draw_vbo()
+void Renderer::draw_vbo(const SimulationState& state)
 {
-	glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(Computer::positions.size()));
+	glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(state.positions.size()));
 }
 
 void Renderer::bind_vbo()
@@ -92,9 +92,9 @@ void Renderer::unbind_vbo()
 	glBindVertexArray(0);
 }
 
-void Renderer::init()
+void Renderer::init(const SimulationState& state)
 {
-	init_vbo();
+	init_vbo(state);
 
 	blur_vbo.send_data("blur", dim::Mesh::screen, dim::DataType::Positions | dim::DataType::TexCoords);
 	post_vbo.send_data("post", dim::Mesh::screen, dim::DataType::Positions | dim::DataType::TexCoords);
@@ -148,7 +148,7 @@ void Renderer::draw()
             bind_vbo();
 
                 dim::Shader::get("galaxy").send_uniform("u_mvp", dim::Window::get_camera().get_matrix());
-                draw_vbo();
+                draw_vbo(Simulator::state);
 
             unbind_vbo();
         dim::Shader::get("galaxy").unbind();
@@ -164,7 +164,7 @@ void Renderer::draw()
             bind_vbo();
 
                 dim::Shader::get("galaxy").send_uniform("u_mvp", dim::Window::get_camera().get_matrix());
-                draw_vbo();
+                draw_vbo(Simulator::state);
 
             unbind_vbo();
         dim::Shader::get("galaxy").unbind();

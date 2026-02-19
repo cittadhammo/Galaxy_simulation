@@ -17,6 +17,8 @@ float				Simulator::galaxy_thickness;
 float				Simulator::galaxies_distance;
 float				Simulator::stars_speed;
 float				Simulator::black_hole_mass;
+SimulationConfig	Simulator::config;
+SimulationState		Simulator::state;
 Simulator::CameraView Simulator::camera_view = Simulator::CameraView::Isometric;
 
 void Simulator::init()
@@ -48,9 +50,19 @@ void Simulator::restart()
 	galaxies_distance = Menu::galaxies_distance;
 	stars_speed = Menu::stars_speed;
 	black_hole_mass = Menu::black_hole_mass;
+	config.simulation_type = simulation_type;
+	config.step = step;
+	config.smoothing_length = smoothing_length;
+	config.interaction_rate = interaction_rate;
+	config.nb_stars = nb_stars;
+	config.galaxy_diameter = galaxy_diameter;
+	config.galaxy_thickness = galaxy_thickness;
+	config.galaxies_distance = galaxies_distance;
+	config.stars_speed = stars_speed;
+	config.black_hole_mass = black_hole_mass;
 
-	Computer::init();
-	Renderer::init();
+	Computer::init(config, state);
+	Renderer::init(state);
 	print_configuration();
 
 	computation_done = false;
@@ -114,6 +126,9 @@ void Simulator::menu_update()
 	step = Menu::step;
 	smoothing_length = Menu::smoothing_length;
 	interaction_rate = Menu::interaction_rate;
+	config.step = step;
+	config.smoothing_length = smoothing_length;
+	config.interaction_rate = interaction_rate;
 }
 
 void Simulator::compute_update()
@@ -121,7 +136,7 @@ void Simulator::compute_update()
 	if (!Menu::pause && (!computation_done || waiting) && !reload)
 	{
 		menu_update();
-		Computer::compute();
+		Computer::compute(config, state);
 		computation_done = true;
 	}
 
@@ -145,7 +160,7 @@ void Simulator::render_update()
 
 		else
 		{
-			Renderer::update_vbo();
+			Renderer::update_vbo(state);
 			computation_done = false;
 		}
 	}

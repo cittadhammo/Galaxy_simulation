@@ -9,6 +9,7 @@
 #include <thread>
 #include <atomic>
 #include <string>
+#include "SimulationData.hpp"
 
 /**
  * @brief A static class representing the simulation.
@@ -35,6 +36,8 @@ public:
 	static float				galaxies_distance;	// The distance between the galaxies.
 	static float				stars_speed;		// The initial speed of the stars.
 	static float				black_hole_mass;	// The mass of the black hole.
+	static SimulationConfig		config;				// Runtime simulation configuration.
+	static SimulationState		state;				// Runtime simulation state (stars).
 	static CameraView			camera_view;		// Camera view preset at startup/config load.
 
 	/**

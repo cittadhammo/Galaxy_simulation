@@ -282,10 +282,10 @@ static int run_batch_mode(const BatchOptions& options, bool close_window)
 	for (int i = 0; i < options.steps && dim::Window::running; ++i)
 	{
 		Simulator::menu_update();
-		Computer::compute();
+		Computer::compute(Simulator::config, Simulator::state);
 	}
 
-	Renderer::update_vbo();
+	Renderer::update_vbo(Simulator::state);
 
 	std::error_code ec;
 	std::filesystem::create_directories(options.output_dir, ec);

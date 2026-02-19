@@ -1,6 +1,7 @@
 #ifndef RENDERER_HPP
 #define RENDERER_HPP
 
+#include "SimulationData.hpp"
 #include "libraries.hpp"
 
 /**
@@ -22,17 +23,17 @@ public:
 	/**
 	 * @brief Create the OpenGL vertex buffer object.
 	 */
-	static void init_vbo();
+	static void init_vbo(const SimulationState& state);
 
 	/**
 	 * @brief Update the vertices.
 	 */
-	static void update_vbo();
+	static void update_vbo(const SimulationState& state);
 
 	/**
 	 * @brief Draw the VBO.
 	 */
-	static void draw_vbo();
+	static void draw_vbo(const SimulationState& state);
 
 	/**
 	 * @brief Bind the VBO.
@@ -47,7 +48,7 @@ public:
 	/**
 	 * @brief Initialize the renderer.
 	 */
-	static void init();
+	static void init(const SimulationState& state);
 
 	/**
 	 * @brief Check the events of the renderer.
