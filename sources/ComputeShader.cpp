@@ -34,7 +34,7 @@ cl::Device ComputeShader::get_default_device()
 	return devices.front();
 }
 
-void ComputeShader::init(const std::string& path)
+void ComputeShader::init(const std::string& path, DevicePreference preference)
 {
 	// Read OpenCL kernel file as a string.
 	std::ifstream kernel_file(path);
@@ -50,35 +50,76 @@ void ComputeShader::init(const std::string& path)
 	}
 
 	std::string errors;
+	const auto matches_preference = [&](cl_device_type type) -> bool
+	{
+		switch (preference)
+		{
+		case DevicePreference::GPU: return (type & CL_DEVICE_TYPE_GPU) != 0;
+		case DevicePreference::CPU: return (type & CL_DEVICE_TYPE_CPU) != 0;
+		case DevicePreference::Any:
+		default: return true;
+		}
+	};
+
+	std::vector<std::pair<cl::Platform, cl::Device>> candidates;
 	for (const cl::Platform& platform : platforms)
 	{
 		std::vector<cl::Device> devices;
 		platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);
 		for (const cl::Device& candidate : devices)
 		{
-			try
-			{
-				cl::Context test_context(candidate);
-				cl::Program test_program(test_context, sources);
-				const cl_int build_result = test_program.build();
-				if (build_result == CL_BUILD_SUCCESS)
-				{
-					device = candidate;
-					context = test_context;
-					program = test_program;
-					queue = cl::CommandQueue(context, device);
-					return;
-				}
+			const cl_device_type type = candidate.getInfo<CL_DEVICE_TYPE>();
+			if (matches_preference(type))
+				candidates.emplace_back(platform, candidate);
+		}
+	}
 
-				errors += "Device: " + candidate.getInfo<CL_DEVICE_NAME>() + "\n";
-				errors += "Build Status: " + std::to_string(test_program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(candidate)) + "\n";
-				errors += "Build Log:\n" + test_program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(candidate) + "\n";
-			}
-			catch (...)
+	if (candidates.empty() && preference != DevicePreference::Any)
+	{
+		for (const cl::Platform& platform : platforms)
+		{
+			std::vector<cl::Device> devices;
+			platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);
+			for (const cl::Device& candidate : devices)
+				candidates.emplace_back(platform, candidate);
+		}
+		errors += "Warning: preferred device type unavailable, falling back to any available OpenCL device.\n";
+	}
+
+	if (candidates.empty())
+	{
+		std::cerr << "No devices found!" << std::endl;
+		exit(1);
+	}
+
+	for (const auto& entry : candidates)
+	{
+		const cl::Platform& platform = entry.first;
+		const cl::Device& candidate = entry.second;
+		try
+		{
+			cl::Context test_context(candidate);
+			cl::Program test_program(test_context, sources);
+			const cl_int build_result = test_program.build();
+			if (build_result == CL_BUILD_SUCCESS)
 			{
-				errors += "Device: " + candidate.getInfo<CL_DEVICE_NAME>() + "\n";
-				errors += "OpenCL error: exception during context/program setup\n";
+				device = candidate;
+				context = test_context;
+				program = test_program;
+				queue = cl::CommandQueue(context, device);
+				std::cout << "[OpenCL] Platform: " << platform.getInfo<CL_PLATFORM_NAME>() << std::endl;
+				std::cout << "[OpenCL] Device: " << device.getInfo<CL_DEVICE_NAME>() << std::endl;
+				return;
 			}
+
+			errors += "Device: " + candidate.getInfo<CL_DEVICE_NAME>() + "\n";
+			errors += "Build Status: " + std::to_string(test_program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(candidate)) + "\n";
+			errors += "Build Log:\n" + test_program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(candidate) + "\n";
+		}
+		catch (...)
+		{
+			errors += "Device: " + candidate.getInfo<CL_DEVICE_NAME>() + "\n";
+			errors += "OpenCL error: exception during context/program setup\n";
 		}
 	}
 

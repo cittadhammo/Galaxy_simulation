@@ -44,8 +44,14 @@ bash cloud/setup_ubuntu_vm.sh
 ### 5) Run physics-only
 
 ```bash
-bash run_physics.sh --config simulation.cfg --steps 10000 --state-out outputs/vm_state.bin
+bash run_physics.sh --device cpu --config simulation.cfg --steps 10000 --state-out outputs/vm_state.bin
 ```
+
+Notes:
+
+- add `--state-out ...` if you want a file output
+- without `--state-out`, run completes with no saved file
+- progress is printed periodically during the loop
 
 ### 6) Copy result back to local machine
 
@@ -83,7 +89,7 @@ This is for temporary testing only.
 ### 4) Run physics-only
 
 ```bash
-!bash run_physics.sh --config simulation.cfg --steps 2000 --state-out outputs/colab_state.bin
+!bash run_physics.sh --device cpu --config simulation.cfg --steps 2000 --state-out outputs/colab_state.bin
 ```
 
 ### 5) Download result
@@ -125,4 +131,3 @@ Try:
    clinfo | head -n 50
    ```
 3. Keep CPU fallback installed (`pocl-opencl-icd`).
-

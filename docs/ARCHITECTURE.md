@@ -13,6 +13,7 @@ You now have **two programs**:
 2. `Galaxy_physics`
    - This runs only the physics calculations.
    - It can run on a cloud VM and save a result file.
+   - It shows progress logs during long runs.
 
 So the idea is:
 
@@ -34,6 +35,7 @@ So the idea is:
 - Physics code and render code are separated in architecture.
 - `Galaxy_physics` binary exists and runs physics loop.
 - It can save a file with final simulation state (`--state-out`).
+- It can prefer OpenCL device type with `--device cpu|gpu|any`.
 
 ## 4) What is NOT done yet
 
@@ -62,6 +64,12 @@ bash unix_run.sh
 
 ```bash
 bash run_physics.sh --config simulation.cfg --steps 10000 --state-out outputs/vm_state.bin
+```
+
+Device preference example:
+
+```bash
+bash run_physics.sh --device cpu --config simulation.cfg --steps 10000 --state-out outputs/vm_state.bin
 ```
 
 If you use a batch-style config line file, you can also point `--config` to that file.
@@ -127,6 +135,8 @@ Run physics-only:
 ```bash
 bash run_physics.sh --steps 2000
 ```
+
+Note: this does not write a file unless you pass `--state-out`.
 
 Run physics-only with config + output file:
 

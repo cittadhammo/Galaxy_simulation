@@ -19,6 +19,12 @@ enum class Permissions
 class ComputeShader
 {
 public:
+	enum class DevicePreference
+	{
+		Any,
+		GPU,
+		CPU
+	};
 
 	static cl::Program		program;	// The program that will run on the device.
 	static cl::Context		context;	// The context which holds the device.
@@ -37,7 +43,7 @@ public:
 	 *
 	 * @param path the path to the compute shader source code
 	 */
-	static void	init(const std::string& path);
+	static void	init(const std::string& path, DevicePreference preference = DevicePreference::Any);
 
 	/**
 	 * @brief Give a buffer from an array of data and its permissions.

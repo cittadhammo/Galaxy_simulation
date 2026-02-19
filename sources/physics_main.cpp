@@ -78,6 +78,7 @@ static void set_default_values_headless()
 struct PhysicsOptions
 {
 	int steps = 2000;
+	ComputeShader::DevicePreference device_preference = ComputeShader::DevicePreference::Any;
 	std::string config_path;
 	std::string state_out;
 };
@@ -233,6 +234,16 @@ static PhysicsOptions parse_args(int argc, char** argv)
 			options.config_path = argv[++i];
 		else if (arg == "--state-out" && i + 1 < argc)
 			options.state_out = argv[++i];
+		else if (arg == "--device" && i + 1 < argc)
+		{
+			const std::string value = argv[++i];
+			if (value == "gpu")
+				options.device_preference = ComputeShader::DevicePreference::GPU;
+			else if (value == "cpu")
+				options.device_preference = ComputeShader::DevicePreference::CPU;
+			else
+				options.device_preference = ComputeShader::DevicePreference::Any;
+		}
 	}
 
 	return options;
@@ -287,12 +298,21 @@ int main(int argc, char** argv)
 
 	SimulationState state;
 
-	ComputeShader::init("shaders/compute/cl_compute_shader.cl");
+	ComputeShader::init("shaders/compute/cl_compute_shader.cl", options.device_preference);
 	Computer::init(config, state);
 
 	std::cout << "[Physics] running " << options.steps << " steps, stars=" << config.nb_stars << std::endl;
+	const int progress_interval = std::max(1, options.steps / 20);
 	for (int i = 0; i < options.steps; ++i)
+	{
 		Computer::compute(config, state);
+		if ((i + 1) % progress_interval == 0 || (i + 1) == options.steps)
+		{
+			const float progress = (100.0f * static_cast<float>(i + 1)) / static_cast<float>(std::max(1, options.steps));
+			std::cout << "[Physics] progress " << (i + 1) << "/" << options.steps
+				<< " (" << static_cast<int>(progress) << "%)" << std::endl;
+		}
+	}
 	std::cout << "[Physics] done" << std::endl;
 
 	if (!options.state_out.empty())

@@ -108,6 +108,7 @@ If you are new to cloud VMs and this split setup, read:
 
 * [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 * [`docs/VM_CHECKLIST.md`](docs/VM_CHECKLIST.md)
+* [`docs/COLAB_SESSION.md`](docs/COLAB_SESSION.md)
 
 It explains:
 
@@ -117,6 +118,7 @@ It explains:
 * how to copy results back locally
 * common errors and fixes
 * command-only VM checklist (copy/paste)
+* full Google Colab session steps (copy/paste)
 
 <br/>
 
@@ -251,11 +253,27 @@ Shortcut:
 bash run_physics.sh --steps 2000
 ```
 
+Important behavior:
+
+* `run_physics.sh` **does not write an output file by default**.
+* use `--state-out <path>` when you want a saved state file.
+* physics loop prints periodic progress logs (`[Physics] progress ...`) during long runs.
+* startup prints selected OpenCL platform/device.
+
 Load simulation parameters from one config line:
 
 ```bash
 bash run_physics.sh --config simulation.cfg --steps 5000
 ```
+
+Choose OpenCL device preference:
+
+```bash
+bash run_physics.sh --device cpu --steps 2000
+bash run_physics.sh --device gpu --steps 2000
+```
+
+`--device gpu` means "prefer GPU". If unavailable, it falls back to any available OpenCL device.
 
 Export final state to a binary file:
 
@@ -397,7 +415,7 @@ For remote runs when your local machine is limited:
 1. Setup VM dependencies + build:
    * `bash cloud/setup_ubuntu_vm.sh`
 2. Physics-only run on VM (no renderer loop):
-   * `bash run_physics.sh --config simulation.cfg --steps 10000 --state-out outputs/vm_state.bin`
+   * `bash run_physics.sh --device cpu --config simulation.cfg --steps 10000 --state-out outputs/vm_state.bin`
 3. Transfer output back locally:
    * `scp ubuntu@<vm-ip>:~/Galaxy_simulation/outputs/vm_state.bin ./outputs/`
 4. Existing remote-render options are still available:
@@ -424,6 +442,9 @@ Detailed change log: see [`CHANGE.md`](CHANGE.md).
   * verify with `clinfo` that the intended device is visible
   * on Linux, install/update the vendor OpenCL runtime (NVIDIA/AMD/Intel) or use `pocl` as fallback
   * keep a CPU OpenCL ICD installed on cloud VMs without GPU
+* `run_physics.sh` finished but no file was created:
+  * expected if `--state-out` was not provided.
+  * example: `bash run_physics.sh --steps 2000 --state-out outputs/physics_state.bin`
 * `Failed to open X11 display`: run from a desktop session with a valid `DISPLAY` variable.
 
 <br/>
