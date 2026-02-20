@@ -11,29 +11,40 @@ BASE_CONFIG=""
 SNAPSHOT_WIDTH=0
 SNAPSHOT_HEIGHT=0
 
+RED_BLOOM=""
+BLUE_BLOOM=""
+RENDER_DELAY=0
+NO_TILE=0
+
 usage() {
   cat <<'EOF'
 Usage:
-  bash checkpoint_snapshot_worker.sh [options]
+  bash checkpoint_snapshot_worker_v2.sh [options]
 
 Options:
   --state-glob <glob>            Glob for checkpoint state files.
-                                 Default: outputs/physics_state_step_*.bin
+                                  Default: outputs/physics_state_step_*.bin
   --snapshot-dir <dir>           Output directory for PNG snapshots.
-                                 Default: outputs/checkpoint_snapshots
+                                  Default: outputs/checkpoint_snapshots
   --camera <top|isometric>       Camera view for snapshot rendering (default: top)
   --config <path>                Base simulation config used for rendering.
-                                 The worker keeps all values and overrides camera_view.
+                                  The worker keeps all values and overrides camera_view.
   --poll-interval <seconds>      Poll delay between scans (default: 2)
   --headless                     Run renderer via xvfb-run
   --snapshot-width <pixels>      Width for snapshot rendering (e.g., 1920, 3840)
   --snapshot-height <pixels>     Height for snapshot rendering (e.g., 1080, 2160)
+  --bloom-red <float>            Red bloom intensity (0.0 to 4.0)
+  --bloom-blue <float>           Blue bloom intensity (0.0 to 4.0)
+  --delay <seconds>              Delay between renders (default: 0)
+  --no-tile                      Disable tiling for window (for Hyprland)
+  --single                       Run once instead of polling loop
   --help                         Show this help
 
 Behavior:
   - Watches for new checkpoint bin files and renders one PNG per file.
   - Output name format: snapshot_step_<N>.png
   - Existing PNG files are skipped.
+  - Use --single for one-time batch rendering.
 EOF
 }
 
@@ -71,6 +82,26 @@ while [[ $# -gt 0 ]]; do
       SNAPSHOT_HEIGHT="${2:-}"
       shift 2
       ;;
+    --bloom-red)
+      RED_BLOOM="${2:-}"
+      shift 2
+      ;;
+    --bloom-blue)
+      BLUE_BLOOM="${2:-}"
+      shift 2
+      ;;
+    --delay)
+      RENDER_DELAY="${2:-}"
+      shift 2
+      ;;
+    --no-tile)
+      NO_TILE=1
+      shift
+      ;;
+    --single)
+      POLL_INTERVAL=""
+      shift
+      ;;
     --help|-h)
       usage
       exit 0
@@ -83,20 +114,45 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ "${CAMERA_VIEW}" != "top" && "${CAMERA_VIEW}" != "isometric" ]]; then
+if [[ -n "${CAMERA_VIEW}" && "${CAMERA_VIEW}" != "top" && "${CAMERA_VIEW}" != "isometric" ]]; then
   echo "Error: --camera must be 'top' or 'isometric'." >&2
   exit 1
 fi
 
+if [[ -n "${RED_BLOOM}" ]]; then
+  if ! [[ "${RED_BLOOM}" =~ ^[0-9]*\.?[0-9]+$ ]]; then
+    echo "Error: --bloom-red must be a number." >&2
+    exit 1
+  fi
+fi
+
+if [[ -n "${BLUE_BLOOM}" ]]; then
+  if ! [[ "${BLUE_BLOOM}" =~ ^[0-9]*\.?[0-9]+$ ]]; then
+    echo "Error: --bloom-blue must be a number." >&2
+    exit 1
+  fi
+fi
+
+if [[ -n "${RENDER_DELAY}" ]]; then
+  if ! [[ "${RENDER_DELAY}" =~ ^[0-9]*\.?[0-9]+$ ]]; then
+    echo "Error: --delay must be a number." >&2
+    exit 1
+  fi
+fi
+
 mkdir -p "${SNAPSHOT_DIR}"
 CAMERA_CFG="${SNAPSHOT_DIR}/.worker_camera.cfg"
+
 if [[ -n "${BASE_CONFIG}" && ! -f "${BASE_CONFIG}" ]]; then
   echo "Error: --config file not found: ${BASE_CONFIG}" >&2
   exit 1
 fi
 
-if [[ -n "${BASE_CONFIG}" ]]; then
-  awk -v cam="${CAMERA_VIEW}" '
+generate_camera_config() {
+  local out_cfg="$1"
+  
+  if [[ -n "${BASE_CONFIG}" ]]; then
+    local awk_script='
     {
       line = $0
       sub(/#.*/, "", line)
@@ -125,6 +181,8 @@ if [[ -n "${BASE_CONFIG}" ]]; then
           tok = "camera_view=" cam
           has_camera = 1
         }
+        if (key == "red_bloom_intensity" || key == "blue_bloom_intensity")
+          next
         if (out != "")
           out = out " "
         out = out tok
@@ -140,12 +198,24 @@ if [[ -n "${BASE_CONFIG}" ]]; then
         exit
       }
     }
-  ' "${BASE_CONFIG}" > "${CAMERA_CFG}"
-fi
+    '
+    awk -v cam="${CAMERA_VIEW}" "${awk_script}" "${BASE_CONFIG}" > "${out_cfg}"
+  fi
+  
+  if [[ ! -s "${out_cfg}" ]]; then
+    echo "SIMCFG camera_view=${CAMERA_VIEW}" > "${out_cfg}"
+  fi
+  
+  if [[ -n "${RED_BLOOM}" ]]; then
+    echo "SIMCFG red_bloom_intensity=${RED_BLOOM}" >> "${out_cfg}"
+  fi
+  
+  if [[ -n "${BLUE_BLOOM}" ]]; then
+    echo "SIMCFG blue_bloom_intensity=${BLUE_BLOOM}" >> "${out_cfg}"
+  fi
+}
 
-if [[ ! -s "${CAMERA_CFG}" ]]; then
-  echo "SIMCFG camera_view=${CAMERA_VIEW}" > "${CAMERA_CFG}"
-fi
+generate_camera_config "${CAMERA_CFG}"
 
 if [[ ! -x "${ROOT_DIR}/build/Galaxy_simulation" ]]; then
   echo "Renderer executable not found, building first..."
@@ -166,9 +236,16 @@ fi
 echo "Watching checkpoints: ${STATE_GLOB}"
 echo "Writing snapshots:   ${SNAPSHOT_DIR}"
 echo "Camera view:         ${CAMERA_VIEW}"
+if [[ -n "${RED_BLOOM}" ]]; then
+  echo "Red bloom intensity: ${RED_BLOOM}"
+fi
+if [[ -n "${BLUE_BLOOM}" ]]; then
+  echo "Blue bloom intensity: ${BLUE_BLOOM}"
+fi
 if [[ -n "${BASE_CONFIG}" ]]; then
   echo "Base config:         ${BASE_CONFIG}"
 fi
+echo "Config file:         ${CAMERA_CFG}"
 
 render_one() {
   local state_file="$1"
@@ -213,7 +290,7 @@ render_one() {
   echo "Rendered step ${step}: ${final_png}"
 }
 
-while true; do
+render_all() {
   mapfile -t files < <(compgen -G "${STATE_GLOB}" | sort -V || true)
   for state_file in "${files[@]}"; do
     base="$(basename "${state_file}")"
@@ -222,5 +299,13 @@ while true; do
       render_one "${state_file}" "${step}" || true
     fi
   done
-  sleep "${POLL_INTERVAL}"
-done
+}
+
+if [[ -z "${POLL_INTERVAL}" ]]; then
+  render_all
+else
+  while true; do
+    render_all
+    sleep "${POLL_INTERVAL}"
+  done
+fi

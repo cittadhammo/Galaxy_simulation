@@ -38,6 +38,7 @@ This repository contains the source code of an n-body type simulation using GPU 
 	* [🧪 Batch Experiment Workflow](#-batch-experiment-workflow)
 	* [✅ Validate Optimized Runs](#-validate-optimized-runs)
 	* [☁️ Cloud VM](#%EF%B8%8F-cloud-vm)
+	* [🧱 Snapshot from Checkpoint Files](#-snapshot-from-checkpoint-files)
 	* [🧩 Troubleshooting](#-troubleshooting)
 * **[📝 Changes](#-changes)**
 * **[🧪 Simulation variants](#-simulation-variants)**
@@ -195,6 +196,62 @@ Then build:
 bash unix_run.sh
 ```
 
+### Quick Makefile Commands
+
+For convenience, use the Makefile for common workflows:
+
+```bash
+# Run physics with checkpointing (saves config + states to outputs/my_run/)
+make run DIR=my_run
+
+# Run physics without snapshots (physics only)
+make run DIR=my_run SNAPSHOTS=0
+
+# Generate snapshots from existing checkpoints
+make snapshot DIR=my_run OUT=snap1
+
+# With custom camera and bloom settings
+make snapshot DIR=my_run OUT=snap_iso CAMERA=isometric BLOOM_RED=2.5 BLOOM_BLUE=0.8
+
+# Single run (no polling loop)
+make snapshot DIR=my_run OUT=snap_final SINGLE=1
+
+# Create video from snapshots
+make movie DIR=outputs/my_run/snapshots
+
+# Video with step numbers overlay
+make movie DIR=outputs/my_run/snapshots STAMP=1
+
+# Slower video (12 fps)
+make movie DIR=outputs/my_run/snapshots FPS=12
+
+# View a state file interactively
+make sim IN=outputs/my_run/states/physics_state_step_200.bin
+```
+
+#### Makefile Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DIR` | Run name (outputs/DIR/) | (required) |
+| `OUT` | Snapshot subfolder name | (required for snapshot) |
+| `IN` | State file for `make sim` | (required) |
+| `STEPS` | Number of physics steps | `2000` |
+| `STATE_INTERVAL` | Checkpoint interval | `40` |
+| `SNAPSHOTS` | Enable snapshots (0/1) | `1` |
+| `CAMERA` | Camera: `top` or `isometric` | `top` |
+| `BLOOM_RED` | Red bloom intensity | (from config) |
+| `BLOOM_BLUE` | Blue bloom intensity | (from config) |
+| `WIDTH` | Snapshot width | `3840` |
+| `HEIGHT` | Snapshot height | `2160` |
+| `HEADLESS` | Use xvfb (0/1) | `1` |
+| `DELAY` | Delay between renders | - |
+| `SINGLE` | Run once (0/1) | - |
+| `STAMP` | Add step numbers (0/1) | `0` |
+| `FPS` | Video framerate | `24` |
+
+All targets require `DIR` (use `outputs/` prefix for tab-completion). Results stored in `outputs/DIR/`.
+
 ## 🚀 Run
 
 ### 1) Interactive Viewer
@@ -319,6 +376,65 @@ bash run_physics_with_worker.sh \
   --worker-headless \
   --worker-snapshot-dir outputs/checkpoint_snapshots_iso \
   -- --steps 5000 --state-out outputs/physics_state.bin --state-interval 500
+```
+
+### 🧱 Snapshot from Checkpoint Files
+
+If you already have checkpoint `.bin` files from a previous run, you can render them with custom settings:
+
+```bash
+# Generate snapshots from existing checkpoints
+make snapshot DIR=outputs/my_run OUT=snap1
+
+# With custom camera and bloom settings
+make snapshot DIR=outputs/my_run OUT=snap_iso CAMERA=isometric BLOOM_RED=2.5 BLOOM_BLUE=0.8
+
+# Single run (no polling loop)
+make snapshot DIR=outputs/my_run OUT=snap_final SINGLE=1
+```
+
+#### Create Video from Snapshots
+
+```bash
+# Create video from snapshots (24 fps)
+make movie DIR=outputs/my_run/snapshots
+
+# With step numbers overlay
+make movie DIR=outputs/my_run/snapshots STAMP=1
+
+# Slower video (12 fps)
+make movie DIR=outputs/my_run/snapshots FPS=12
+```
+
+Makefile variables:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DIR` | Run name (outputs/DIR/) | (required) |
+| `OUT` | Snapshot subfolder name | (required for snapshot) |
+| `CAMERA` | Camera view: `top` or `isometric` | `top` |
+| `BLOOM_RED` | Red bloom intensity (0.0-4.0) | (from config) |
+| `BLOOM_BLUE` | Blue bloom intensity (0.0-4.0) | (from config) |
+| `WIDTH` | Snapshot width in pixels | `3840` |
+| `HEIGHT` | Snapshot height in pixels | `2160` |
+| `HEADLESS` | Use xvfb for headless rendering (0/1) | `1` |
+| `DELAY` | Delay between renders in seconds | - |
+| `SINGLE` | Run once instead of polling loop | - |
+| `STAMP` | Add step numbers overlay (0/1) | `0` |
+| `FPS` | Video framerate | `24` |
+
+Or use the script directly:
+
+```bash
+bash snapshot_from_folder.sh \
+  --state-glob "outputs/my_run/states/physics_state_step_*.bin" \
+  --snapshot-dir "outputs/my_run/snap_iso" \
+  --config outputs/my_run/simulation.cfg \
+  --camera isometric \
+  --bloom-red 2.5 \
+  --bloom-blue 0.8 \
+  --headless \
+  --single
 ```
 
 Argument reference (worker tools):
