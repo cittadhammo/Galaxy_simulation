@@ -7,6 +7,8 @@ WORKER_CAMERA="top"
 WORKER_SNAPSHOT_DIR=""
 WORKER_POLL_INTERVAL=2
 WORKER_HEADLESS=0
+WORKER_SNAPSHOT_WIDTH=0
+WORKER_SNAPSHOT_HEIGHT=0
 PHYSICS_ARGS=()
 
 usage() {
@@ -18,12 +20,15 @@ Usage:
 Examples:
   bash run_physics_with_worker.sh -- --steps 5000 --state-out outputs/physics_state.bin --state-interval 500
   bash run_physics_with_worker.sh --worker-camera isometric --worker-headless -- --steps 5000 --state-out outputs/physics_state.bin --state-interval 500
+  bash run_physics_with_worker.sh --worker-snapshot-width 3840 --worker-snapshot-height 2160 -- --steps 5000 --state-out outputs/physics_state.bin --state-interval 500
 
 Worker options:
   --worker-camera <top|isometric>   Snapshot camera view (default: top)
   --worker-snapshot-dir <dir>       Snapshot output dir (default: derived from --state-out)
   --worker-poll-interval <seconds>  Worker polling interval (default: 2)
   --worker-headless                 Use xvfb-run for renderer snapshots
+  --worker-snapshot-width <pixels>  Width for snapshot rendering (e.g., 1920, 3840)
+  --worker-snapshot-height <pixels> Height for snapshot rendering (e.g., 1080, 2160)
   --help                            Show help
 
 Physics options:
@@ -78,6 +83,14 @@ while [[ $# -gt 0 ]]; do
     --worker-headless)
       WORKER_HEADLESS=1
       shift
+      ;;
+    --worker-snapshot-width)
+      WORKER_SNAPSHOT_WIDTH="${2:-}"
+      shift 2
+      ;;
+    --worker-snapshot-height)
+      WORKER_SNAPSHOT_HEIGHT="${2:-}"
+      shift 2
       ;;
     --help|-h)
       usage
@@ -138,11 +151,17 @@ fi
 if [[ -n "${CONFIG_PATH}" ]]; then
   WORKER_ARGS+=(--config "${CONFIG_PATH}")
 fi
+if [[ "${WORKER_SNAPSHOT_WIDTH}" -gt 0 && "${WORKER_SNAPSHOT_HEIGHT}" -gt 0 ]]; then
+  WORKER_ARGS+=(--snapshot-width "${WORKER_SNAPSHOT_WIDTH}" --snapshot-height "${WORKER_SNAPSHOT_HEIGHT}")
+fi
 
 echo "Starting checkpoint worker..."
 echo "  state glob:    ${STATE_GLOB}"
 echo "  snapshot dir:  ${WORKER_SNAPSHOT_DIR}"
 echo "  camera:        ${WORKER_CAMERA}"
+if [[ "${WORKER_SNAPSHOT_WIDTH}" -gt 0 && "${WORKER_SNAPSHOT_HEIGHT}" -gt 0 ]]; then
+  echo "  snapshot res:  ${WORKER_SNAPSHOT_WIDTH}x${WORKER_SNAPSHOT_HEIGHT}"
+fi
 
 bash "${ROOT_DIR}/checkpoint_snapshot_worker.sh" "${WORKER_ARGS[@]}" &
 WORKER_PID=$!

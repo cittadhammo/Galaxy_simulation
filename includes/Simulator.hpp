@@ -42,6 +42,7 @@ public:
 	static SimulationState		state;				// Runtime simulation state (stars).
 	static bool					renderer_enabled;	// True when renderer/window path is enabled.
 	static CameraView			camera_view;		// Camera view preset at startup/config load.
+	static float				camera_angle;	// Camera angle in degrees (0-360) for custom views.
 
 	/**
 	 * @brief Initialize the simulation.

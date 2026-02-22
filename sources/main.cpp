@@ -40,6 +40,8 @@ struct BatchOptions
 	bool physics_only = false;
 	int steps = 0;
 	int snapshots = 3;
+	int snapshot_width = 0;
+	int snapshot_height = 0;
 	std::string output_dir = "outputs";
 	std::string config_path;
 	std::string batch_config_path;
@@ -84,6 +86,10 @@ static BatchOptions parse_args(int argc, char** argv)
 			options.state_in_path = argv[++i];
 		else if (arg == "--physics-only")
 			options.physics_only = true;
+		else if (arg == "--snapshot-width" && i + 1 < argc)
+			options.snapshot_width = std::max(0, parse_int(argv[++i], 0));
+		else if (arg == "--snapshot-height" && i + 1 < argc)
+			options.snapshot_height = std::max(0, parse_int(argv[++i], 0));
 	}
 
 	return options;
@@ -198,6 +204,12 @@ static bool apply_config_kv(const ConfigKV& kv, BatchOptions& batch, bool* outpu
 		if (parse_camera_view(*v, view))
 			Simulator::camera_view = view;
 	}
+	if (const std::string* v = get("camera_angle"))
+	{
+		float parsed = 0.0f;
+		if (to_float(*v, parsed))
+			Simulator::camera_angle = parsed;
+	}
 
 	auto set_float = [&](const char* key, float& target)
 	{
@@ -270,6 +282,18 @@ static bool apply_config_kv(const ConfigKV& kv, BatchOptions& batch, bool* outpu
 		batch.output_dir = *v;
 		if (output_dir_overridden != nullptr)
 			*output_dir_overridden = true;
+	}
+	if (const std::string* v = get("snapshot_width"))
+	{
+		int parsed = batch.snapshot_width;
+		if (to_int(*v, parsed))
+			batch.snapshot_width = std::max(0, parsed);
+	}
+	if (const std::string* v = get("snapshot_height"))
+	{
+		int parsed = batch.snapshot_height;
+		if (to_int(*v, parsed))
+			batch.snapshot_height = std::max(0, parsed);
 	}
 
 	return true;
@@ -375,15 +399,21 @@ static int run_batch_mode(const BatchOptions& options, bool close_window, bool c
 		std::cerr << "Warning: failed to create output directory: " << options.output_dir << std::endl;
 
 	const float snapshot_radius = estimate_snapshot_radius(Simulator::state);
+	std::cerr << "[DEBUG] camera_angle = " << Simulator::camera_angle << ", snapshots = " << options.snapshots << std::endl;
 	for (int i = 0; i < options.snapshots; ++i)
 	{
-		const bool single_top_snapshot = (options.snapshots == 1 && Simulator::camera_view == Simulator::CameraView::Top);
-		if (single_top_snapshot)
-			set_top_snapshot_camera(snapshot_radius);
+		if (Simulator::camera_angle >= 0.0f || options.snapshots > 1)
+		{
+			const float theta = (options.snapshots > 1) ? 
+				(2.f * dim::pi * static_cast<float>(i)) / static_cast<float>(options.snapshots) : 0.f;
+			float phi = dim::pi / 3.f;
+			if (Simulator::camera_angle >= 0.0f)
+				phi = (90.0f - Simulator::camera_angle) * dim::pi / 180.0f;
+			set_snapshot_camera_angle(theta, snapshot_radius, phi);
+		}
 		else
 		{
-			const float theta = (2.f * dim::pi * static_cast<float>(i)) / static_cast<float>(options.snapshots);
-			set_snapshot_camera_angle(theta, snapshot_radius);
+			set_top_snapshot_camera(snapshot_radius);
 		}
 
 		// Warm up one frame before capture so post-process buffers are populated.
@@ -430,7 +460,15 @@ int main(int argc, char** argv)
 	BatchOptions mutable_batch_options = batch_options;
 
 	if (!mutable_batch_options.physics_only)
-		dim::Window::open("Galaxy simulation", 0.75f, "resources/icons/icon.png");
+	{
+		if (mutable_batch_options.snapshot_width > 0 && mutable_batch_options.snapshot_height > 0)
+			dim::Window::open("Galaxy simulation",
+				static_cast<unsigned int>(mutable_batch_options.snapshot_width),
+				static_cast<unsigned int>(mutable_batch_options.snapshot_height),
+				"resources/icons/icon.png");
+		else
+			dim::Window::open("Galaxy simulation", 0.75f, "resources/icons/icon.png");
+	}
 	Simulator::init(!mutable_batch_options.physics_only);
 
 	if (!mutable_batch_options.physics_only)
@@ -446,7 +484,14 @@ int main(int argc, char** argv)
 			std::cerr << "Warning: no valid config line found in " << mutable_batch_options.config_path << std::endl;
 		else
 		{
-			apply_config_kv(jobs.front(), mutable_batch_options);
+			// Merge all config lines together
+			ConfigKV merged;
+			for (const auto& job : jobs)
+			{
+				for (const auto& pair : job)
+					merged[pair.first] = pair.second;
+			}
+			apply_config_kv(merged, mutable_batch_options);
 			Simulator::restart();
 			Simulator::apply_camera_view();
 		}

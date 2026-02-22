@@ -15,6 +15,8 @@ RED_BLOOM=""
 BLUE_BLOOM=""
 RENDER_DELAY=0
 NO_TILE=0
+CAMERA_ANGLE=""
+ROTATION=""
 
 usage() {
   cat <<'EOF'
@@ -37,6 +39,7 @@ Options:
   --bloom-blue <float>           Blue bloom intensity (0.0 to 4.0)
   --delay <seconds>              Delay between renders (default: 0)
   --no-tile                      Disable tiling for window (for Hyprland)
+  --rotation <degrees>           Rotation increment per snapshot for rotating video
   --single                       Run once instead of polling loop
   --help                         Show this help
 
@@ -97,6 +100,14 @@ while [[ $# -gt 0 ]]; do
     --no-tile)
       NO_TILE=1
       shift
+      ;;
+    --camera-angle)
+      CAMERA_ANGLE="${2:-}"
+      shift 2
+      ;;
+    --rotation)
+      ROTATION="${2:-}"
+      shift 2
       ;;
     --single)
       POLL_INTERVAL=""
@@ -213,6 +224,10 @@ generate_camera_config() {
   if [[ -n "${BLUE_BLOOM}" ]]; then
     echo "SIMCFG blue_bloom_intensity=${BLUE_BLOOM}" >> "${out_cfg}"
   fi
+  
+  if [[ -n "${CAMERA_ANGLE}" ]]; then
+    echo "SIMCFG camera_angle=${CAMERA_ANGLE}" >> "${out_cfg}"
+  fi
 }
 
 generate_camera_config "${CAMERA_CFG}"
@@ -242,16 +257,28 @@ fi
 if [[ -n "${BLUE_BLOOM}" ]]; then
   echo "Blue bloom intensity: ${BLUE_BLOOM}"
 fi
+if [[ -n "${ROTATION}" ]]; then
+  echo "Rotation per snapshot: ${ROTATION} degrees"
+fi
 if [[ -n "${BASE_CONFIG}" ]]; then
   echo "Base config:         ${BASE_CONFIG}"
 fi
 echo "Config file:         ${CAMERA_CFG}"
+
+SNAPSHOT_INDEX=0
 
 render_one() {
   local state_file="$1"
   local step="$2"
   local final_png="${SNAPSHOT_DIR}/snapshot_step_${step}.png"
   local temp_dir="${SNAPSHOT_DIR}/.tmp_render_${step}"
+
+  # Always increment index for rotation, even if skipping existing file
+  local current_angle=""
+  if [[ -n "${ROTATION}" ]]; then
+    current_angle=$((ROTATION * SNAPSHOT_INDEX))
+    ((SNAPSHOT_INDEX++))
+  fi
 
   if [[ -f "${final_png}" ]]; then
     return 0
@@ -260,6 +287,16 @@ render_one() {
   rm -rf "${temp_dir}"
   mkdir -p "${temp_dir}"
 
+  local snapshot_config="${temp_dir}/snapshot.cfg"
+  if [[ -f "${CAMERA_CFG}" ]]; then
+    cp "${CAMERA_CFG}" "${snapshot_config}"
+  else
+    touch "${snapshot_config}"
+  fi
+  if [[ -n "${current_angle}" ]]; then
+    echo "camera_angle=${current_angle}" >> "${snapshot_config}"
+  fi
+
   if [[ "${HEADLESS}" -eq 1 ]]; then
     xvfb-run -a -s "-screen 0 ${SNAPSHOT_WIDTH}x${SNAPSHOT_HEIGHT}x24" \
       "${ROOT_DIR}/build/Galaxy_simulation" \
@@ -267,7 +304,7 @@ render_one() {
       --batch-steps 1 \
       --snapshots 1 \
       --output-dir "${temp_dir}" \
-      --config "${CAMERA_CFG}" \
+      --config "${snapshot_config}" \
       "${SNAPSHOT_ARGS[@]}"
   else
     "${ROOT_DIR}/build/Galaxy_simulation" \
@@ -275,7 +312,7 @@ render_one() {
       --batch-steps 1 \
       --snapshots 1 \
       --output-dir "${temp_dir}" \
-      --config "${CAMERA_CFG}" \
+      --config "${snapshot_config}" \
       "${SNAPSHOT_ARGS[@]}"
   fi
 

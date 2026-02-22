@@ -546,6 +546,50 @@ void Menu::display()
 			ImGui::TextWrapped("%s", config_output_status.c_str());
 
 		ImGui::NewLine();
+		ImGui::Separator();
+		ImGui::Text("Quick export");
+
+		if (ImGui::Button("Copy to simulation.cfg"))
+		{
+			try
+			{
+				std::ofstream out("simulation.cfg");
+				if (out)
+				{
+					out << "# Default interactive simulation config loaded by run_sim.sh when no args are passed.\n";
+					out << "# Set camera_view=top for top-down startup in normal simulation mode.\n\n";
+					out << Simulator::configuration_line() << '\n';
+					config_output_status = "Written to simulation.cfg";
+				}
+				else
+					config_output_status = "Failed to open simulation.cfg";
+			}
+			catch (const std::exception& e)
+			{
+				config_output_status = std::string("Export error: ") + e.what();
+			}
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Copy to user.batchcfg"))
+		{
+			try
+			{
+				std::ofstream out("batch_configs/user.batchcfg");
+				if (out)
+				{
+					out << Simulator::configuration_line() << '\n';
+					config_output_status = "Written to batch_configs/user.batchcfg";
+				}
+				else
+					config_output_status = "Failed to open batch_configs/user.batchcfg";
+			}
+			catch (const std::exception& e)
+			{
+				config_output_status = std::string("Export error: ") + e.what();
+			}
+		}
+
+		ImGui::NewLine();
 
 		std::vector<bool> buttons = centered_buttons({ "Restart", pause_button }, 25.f, 20.f);
 

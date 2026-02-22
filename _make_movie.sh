@@ -5,31 +5,24 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SRC_DIR="$1"
 STAMP="$2"
 FPS="${3:-24}"
-TEMP_DIR="$SRC_DIR/.movie_temp"
 ABS_SRC="$SCRIPT_DIR/$SRC_DIR"
-ABS_TEMP="$SCRIPT_DIR/$TEMP_DIR"
 
+# Create temp directory
+TEMP_DIR="$ABS_SRC/.movie_temp"
 mkdir -p "$TEMP_DIR"
 
-for f in $(ls "$SRC_DIR"/snapshot_step_*.png | sort -V); do
-    step=$(basename "$f" | sed 's/snapshot_step_//;s/.png//')
-    padded=$(printf "%07d" "$step")
-    cp "$f" "$TEMP_DIR/snapshot_step_${padded}.png"
+# Copy files with sequential numbering
+i=1
+for f in $(ls "$ABS_SRC"/snapshot_step_*.png | sort -V); do
+    padded=$(printf "%04d" "$i")
+    cp "$f" "$TEMP_DIR/snapshot_${padded}.png"
+    i=$((i+1))
 done
 
-if [ "$STAMP" = "1" ]; then
-    TOTAL=$(ls "$TEMP_DIR"/snapshot_step_*.png | wc -l)
-    COUNT=0
-    for f in "$TEMP_DIR"/snapshot_step_*.png; do
-        COUNT=$((COUNT + 1))
-        step=$(basename "$f" | sed 's/snapshot_step_//;s/.png//')
-        printf "\rAdding stamps: %d/%d" "$COUNT" "$TOTAL"
-        magick "$f" -pointsize 48 -fill white -gravity northwest -annotate +50+50 "Step $step" "$f"
-    done
-    echo ""
-fi
-
+# Use ffmpeg with sequential frames
 cd "$TEMP_DIR"
-ffmpeg -y -framerate "$FPS" -pattern_type glob -i "snapshot_step_*.png" -c:v libx264 -pix_fmt yuv420p "$ABS_SRC/movie.mp4"
+ffmpeg -y -framerate "$FPS" -i "snapshot_%04d.png" -c:v libx264 -pix_fmt yuv420p "$ABS_SRC/movie.mp4" 2>&1 | grep -E "frame=|Video saved"
+
+# Cleanup
 rm -rf "$TEMP_DIR"
 echo "Video saved to $ABS_SRC/movie.mp4"

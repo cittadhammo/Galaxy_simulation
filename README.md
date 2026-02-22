@@ -136,6 +136,157 @@ This script:
 * uses the OpenCL include/library shipped in this repository
 * builds the executable in `./build`
 
+## 🚀 Quick Start (Makefile)
+
+After building, use the Makefile for common workflows:
+
+```bash
+# Run interactive galaxy simulation (from simulation.cfg)
+make sim
+
+# Run physics with checkpointing (saves config + states to outputs/DIR/)
+make physic DIR=my_run
+
+# Run physics without snapshots (physics only)
+make physic DIR=my_run SNAPSHOTS=0
+
+# Generate snapshots from existing checkpoints
+make snapshot DIR=my_run OUT=snap1
+
+# Generate snapshots with elevation angle
+make snapshot DIR=my_run OUT=snap1 ANGLE=45
+
+# Generate rotating snapshots (5 degrees per checkpoint)
+make snapshot DIR=my_run OUT=rotate ROT=5
+
+# View a state file interactively
+make view IN=outputs/my_run/states/physics_state_step_200.bin
+
+# Create video from snapshots
+make movie DIR=outputs/my_run/snapshots
+```
+
+#### Makefile Targets
+
+| Target | Description |
+|--------|-------------|
+| `make sim` | Run interactive galaxy from `simulation.cfg` |
+| `make physic` | Run physics with worker (requires `DIR`) |
+| `make snapshot` | Generate snapshots from checkpoints (requires `DIR` and `OUT`) |
+| `make view` | View a state file interactively (requires `IN`) |
+| `make movie` | Create video from snapshots |
+
+#### Makefile Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DIR` | Run name (outputs/DIR/) | (required) |
+| `OUT` | Snapshot subfolder name | (required for snapshot) |
+| `IN` | State file for `make view` | (required for view) |
+| `STEPS` | Number of physics steps | `2000` |
+| `STATE_INTERVAL` | Checkpoint interval | `40` |
+| `SNAPSHOTS` | Enable snapshots (0/1) | `1` |
+| `CAMERA` | Camera: `top` or `isometric` | `top` |
+| `BLOOM_RED` | Red bloom intensity | (from config) |
+| `BLOOM_BLUE` | Blue bloom intensity | (from config) |
+| `ANGLE` | Camera elevation angle (0-360) | - |
+| `ROT` | Rotation increment per checkpoint | - |
+| `WIDTH` | Snapshot width | `3840` |
+| `HEIGHT` | Snapshot height | `2160` |
+| `HEADLESS` | Use xvfb (0/1) | `1` |
+| `DELAY` | Delay between renders | - |
+| `SINGLE` | Run once (0/1) | - |
+| `STAMP` | Add step numbers (0/1) | `0` |
+| `FPS` | Video framerate | `24` |
+| `DEVICE` | OpenCL device: cpu or gpu | auto |
+
+All targets require `DIR` (use `outputs/` prefix for tab-completion). Results stored in `outputs/DIR/`.
+
+<br/>
+
+## 🔄 Typical Workflow
+
+Here's a typical workflow to create galaxy simulation videos:
+
+### Step 1: Explore and tweak parameters
+```bash
+make sim
+```
+- Explore the simulation interactively
+- Tweak parameters in the GUI (careful: max ~30000 stars for CPU performance)
+- When happy with the look, click one of the **Quick export** buttons:
+  - **Copy to simulation.cfg** - directly updates the root config file
+  - **Copy to user.batchcfg** - saves to batch config file
+
+### Step 2: Config is ready!
+```bash
+# If you clicked "Copy to simulation.cfg", it's already ready!
+# If you clicked "Copy to user.batchcfg", copy it:
+cp batch_configs/user.batchcfg simulation.cfg
+
+# You can also manually edit simulation.cfg to:
+# - Increase stars (e.g., 100000)
+# - Adjust star speeds (e.g., stars_speed=50)
+```
+- Explore the simulation interactively
+- Tweak parameters in the GUI (careful: max ~30000 stars for CPU performance)
+- When happy with the look, click **Append current SIMCFG to file** button
+  - Default output: `batch_configs/user.batchcfg`
+  - You can change the file path in the text field above the button
+
+### Step 2: Update config file
+```bash
+# Copy the config from batch_configs/user.batchcfg to simulation.cfg
+cp batch_configs/user.batchcfg simulation.cfg
+
+# Or manually edit simulation.cfg to:
+# - Increase stars (e.g., 100000)
+# - Adjust star speeds (e.g., stars_speed=50)
+```
+
+### Step 3: Run physics simulation
+```bash
+make physic DIR=my_experiment STEPS=2000 STATE_INTERVAL=20
+```
+- This saves state checkpoints every 20 steps
+- Runs with the config from `simulation.cfg`
+
+### Step 4: Generate and preview snapshots
+```bash
+# Check the auto-generated snapshots from the worker
+ls outputs/my_experiment/snapshots/
+
+# Or regenerate with custom settings:
+make snapshot DIR=outputs/my_experiment OUT=preview SNAPSHOTS=6
+make view IN=outputs/my_experiment/states/physics_state_step_200.bin
+```
+
+### Step 5: Create first movie (top-down view)
+```bash
+make movie DIR=outputs/my_experiment/snapshots
+```
+
+### Step 6: Create rotating video (optional)
+```bash
+# Generate snapshots with rotation (5 degrees per checkpoint)
+make snapshot DIR=outputs/my_experiment OUT=rotate ROT=5
+
+# Create rotating video
+make movie DIR=outputs/my_experiment/rotate
+```
+
+### Step 7: Try new parameters
+```bash
+# Edit simulation.cfg with new parameters, then:
+make physic DIR=new_experiment STEPS=3000 STATE_INTERVAL=40
+```
+
+**Tips:**
+- Use different `DIR` names for each experiment to keep results separate
+- `ANGLE=45` gives a 45° elevated view
+- `ROT=5` rotates 5° per checkpoint (use with many checkpoints)
+- Use `SNAPSHOTS=0` to run physics without any rendering overhead
+
 <br/>
 
 # 🛠️ Install
@@ -196,61 +347,7 @@ Then build:
 bash unix_run.sh
 ```
 
-### Quick Makefile Commands
-
-For convenience, use the Makefile for common workflows:
-
-```bash
-# Run physics with checkpointing (saves config + states to outputs/my_run/)
-make run DIR=my_run
-
-# Run physics without snapshots (physics only)
-make run DIR=my_run SNAPSHOTS=0
-
-# Generate snapshots from existing checkpoints
-make snapshot DIR=my_run OUT=snap1
-
-# With custom camera and bloom settings
-make snapshot DIR=my_run OUT=snap_iso CAMERA=isometric BLOOM_RED=2.5 BLOOM_BLUE=0.8
-
-# Single run (no polling loop)
-make snapshot DIR=my_run OUT=snap_final SINGLE=1
-
-# Create video from snapshots
-make movie DIR=outputs/my_run/snapshots
-
-# Video with step numbers overlay
-make movie DIR=outputs/my_run/snapshots STAMP=1
-
-# Slower video (12 fps)
-make movie DIR=outputs/my_run/snapshots FPS=12
-
-# View a state file interactively
-make sim IN=outputs/my_run/states/physics_state_step_200.bin
-```
-
-#### Makefile Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DIR` | Run name (outputs/DIR/) | (required) |
-| `OUT` | Snapshot subfolder name | (required for snapshot) |
-| `IN` | State file for `make sim` | (required) |
-| `STEPS` | Number of physics steps | `2000` |
-| `STATE_INTERVAL` | Checkpoint interval | `40` |
-| `SNAPSHOTS` | Enable snapshots (0/1) | `1` |
-| `CAMERA` | Camera: `top` or `isometric` | `top` |
-| `BLOOM_RED` | Red bloom intensity | (from config) |
-| `BLOOM_BLUE` | Blue bloom intensity | (from config) |
-| `WIDTH` | Snapshot width | `3840` |
-| `HEIGHT` | Snapshot height | `2160` |
-| `HEADLESS` | Use xvfb (0/1) | `1` |
-| `DELAY` | Delay between renders | - |
-| `SINGLE` | Run once (0/1) | - |
-| `STAMP` | Add step numbers (0/1) | `0` |
-| `FPS` | Video framerate | `24` |
-
-All targets require `DIR` (use `outputs/` prefix for tab-completion). Results stored in `outputs/DIR/`.
+For detailed Makefile commands and variables, see the [Quick Start section](#-quick-start-makefile) above.
 
 ## 🚀 Run
 
@@ -389,6 +486,9 @@ make snapshot DIR=outputs/my_run OUT=snap1
 # With custom camera and bloom settings
 make snapshot DIR=outputs/my_run OUT=snap_iso CAMERA=isometric BLOOM_RED=2.5 BLOOM_BLUE=0.8
 
+# With camera angle (degrees from vertical)
+make snapshot DIR=outputs/my_run OUT=snap_rotated CAMERA_ANGLE=45
+
 # Single run (no polling loop)
 make snapshot DIR=outputs/my_run OUT=snap_final SINGLE=1
 ```
@@ -415,6 +515,7 @@ Makefile variables:
 | `CAMERA` | Camera view: `top` or `isometric` | `top` |
 | `BLOOM_RED` | Red bloom intensity (0.0-4.0) | (from config) |
 | `BLOOM_BLUE` | Blue bloom intensity (0.0-4.0) | (from config) |
+| `CAMERA_ANGLE` | Camera angle in degrees (0-360) | - |
 | `WIDTH` | Snapshot width in pixels | `3840` |
 | `HEIGHT` | Snapshot height in pixels | `2160` |
 | `HEADLESS` | Use xvfb for headless rendering (0/1) | `1` |
@@ -752,3 +853,153 @@ If you just want to test the program without editing the source code, go see the
 # 🙏 Credits
 
 * [**Angel Uriot**](https://github.com/angeluriot) : Creator of the project.
+
+<br>
+
+---
+
+# 📊 Galaxy Physics Documentation
+
+This section documents how the physics is calculated in the galaxy simulation and how negative mass is associated with particles in different initial conditions.
+
+## Overview
+
+The simulation uses an **N-body gravitational simulation** with two types of matter: **positive mass** (attractive) and **negative mass** ( repulsive when interacting with positive matter). The computation runs entirely on the GPU via OpenCL.
+
+## Force Calculation
+
+### N-Body Interaction (GPU Kernel)
+
+The force on each particle is computed in the OpenCL kernel `cl_compute_shader.cl` using a brute-force N² approach:
+
+```c
+for each particle i:
+    for each particle j (sampled by interaction_rate):
+        if i != j:
+            vector = position[j] - position[i]
+            if types[i] == types[j]:
+                // Same sign: attraction
+                sign = (type == -1) ? negative_attraction_constant : 1.0
+            else:
+                // Different signs: repulsion
+                sign = -repulsion_constant
+            
+            acceleration += sign * normalize(vector) / (|vector|² + smoothing_length)
+```
+
+**Key parameters:**
+
+| Parameter | Description |
+|-----------|-------------|
+| `interaction_rate` | Fraction of particle pairs sampled per step (0-1). Higher = more accuracy, more compute. |
+| `smoothing_length` | Softening parameter to avoid singularities at close distances |
+| `negative_attraction_constant` | Multiplier for negative-negative attraction (default: 1.0) |
+| `repulsion_constant` | Multiplier for positive-negative repulsion (default: 1.0) |
+
+### Central Black Hole
+
+A central mass at the origin exerts additional gravitational attraction:
+
+```
+acceleration += black_hole_mass * normalize(-position) / (|position|² + smoothing_length)
+```
+
+### Integration (Euler Method)
+
+Velocity and position are updated each timestep:
+
+```
+velocity += step * acceleration
+position += step * velocity
+```
+
+## Initial Matter Distributions
+
+When initializing a galaxy, each star is assigned a **type** (+1 for positive mass, -1 for negative mass). The distribution depends on the selected `matter_distribution` mode:
+
+### 1. Core + Halo (Default)
+
+```
+core_radius = type_diameter / 2
+
+for each star:
+    if distance_from_center <= core_radius:
+        // Inside core
+        if random() <= core_extra_negative_density:
+            type = -1  // Negative
+        else:
+            type = +1  // Positive
+    else:
+        // Outside core (halo)
+        type = -1  // Always negative
+```
+
+- **Positive core**: Stars within `type_diameter` sphere
+- **Negative halo**: Stars outside the core radius
+- **Extra negative density**: The `core_extra_negative_density` parameter (0-1) injects negative stars into the core region, allowing hybrid configurations
+
+### 2. Random Mix
+
+```
+for each star:
+    if random() <= positive_ratio:
+        type = +1
+    else:
+        type = -1
+```
+
+Stars are randomly assigned positive/negative based on the `positive_ratio` parameter (e.g., 0.5 = 50% each).
+
+### 3. Split on X
+
+```
+for each star:
+    if position.x <= 0:
+        type = +1  // Left half
+    else:
+        type = -1  // Right half
+```
+
+The simulation volume is divided along the X-axis, creating a positive half-space and a negative half-space.
+
+## Force Sign Conventions
+
+| Interaction | Force Direction |
+|-------------|-----------------|
+| Positive + Positive | Attraction (gravity) |
+| Negative + Negative | Attraction (scaled by `negative_attraction_constant`) |
+| Positive + Negative | Repulsion (scaled by `repulsion_constant`) |
+
+This creates a system where:
+- Positive mass clusters under mutual gravitation
+- Negative mass also clusters (self-attraction)
+- Positive and negative matter repel each other
+
+## Color Convention
+
+- **Blue stars**: Positive (regular) mass
+- **Red stars**: Negative mass
+
+## Initial Velocity Setup
+
+For **Galaxy** simulation type:
+
+```
+tangential_speed = initial_speed_for_star(config, star_type)
+velocity = normalize(position × up_vector) * tangential_speed
+```
+
+Stars receive an initial tangential velocity perpendicular to the radial direction, creating orbital motion around the galactic center.
+
+For **Universe** simulation type:
+
+```
+radial_speed = (distance / galaxy_radius) * initial_speed
+velocity = normalize(position) * radial_speed
+```
+
+Stars receive an outward radial velocity proportional to their distance from center, simulating cosmic expansion.
+
+---
+
+*This documentation applies to the Galaxy simulation variant. Collision and Universe simulations use different initial velocity configurations but the same underlying force calculation.*

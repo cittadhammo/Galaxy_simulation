@@ -24,6 +24,7 @@ SimulationConfig	Simulator::config;
 SimulationState		Simulator::state;
 bool				Simulator::renderer_enabled = true;
 Simulator::CameraView Simulator::camera_view = Simulator::CameraView::Isometric;
+float Simulator::camera_angle = -1.0f;
 
 void Simulator::init(bool enable_renderer)
 {
@@ -210,6 +211,16 @@ void Simulator::apply_camera_view()
 	{
 		dim::OrbitController& orbit = static_cast<dim::OrbitController&>(controller);
 		center = orbit.get_center();
+	}
+
+	if (camera_angle != 0.0f)
+	{
+		dim::Vector3 position(0.f, 0.f, radius);
+		position.set_phi((90.0f - camera_angle) * dim::pi / 180.0f);
+		position += center;
+		camera.set_position(position);
+		camera.set_direction(center - position);
+		return;
 	}
 
 	switch (camera_view)

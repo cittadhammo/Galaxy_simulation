@@ -328,7 +328,9 @@ static std::string build_step_labeled_path(const std::string& base_path, int ste
 	const fs::path parent = base.has_parent_path() ? base.parent_path() : fs::path(".");
 	const std::string stem = base.stem().string().empty() ? std::string("physics_state") : base.stem().string();
 	const std::string ext = base.extension().string().empty() ? std::string(".bin") : base.extension().string();
-	const fs::path labeled = parent / (stem + "_step_" + std::to_string(step_index) + ext);
+	char buffer[16];
+	snprintf(buffer, sizeof(buffer), "_step_%07d", step_index);
+	const fs::path labeled = parent / (stem + buffer + ext);
 	return labeled.string();
 }
 
@@ -407,7 +409,9 @@ static bool render_checkpoint_snapshot(
 		return false;
 
 	const fs::path generated = fs::path(output_dir) / "snapshot_0.png";
-	const fs::path labeled = fs::path(output_dir) / ("snapshot_step_" + std::to_string(step_index) + ".png");
+	char snapshot_name[32];
+	snprintf(snapshot_name, sizeof(snapshot_name), "snapshot_step_%07d.png", step_index);
+	const fs::path labeled = fs::path(output_dir) / snapshot_name;
 	if (!fs::exists(generated))
 		return false;
 
