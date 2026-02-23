@@ -434,6 +434,11 @@ static int run_batch_mode(const BatchOptions& options, bool close_window, bool c
 				else
 					elev = (normalized - 270.0f) - 90.0f;  // 0→-90
 				
+				// Small epsilon to avoid singularity at exactly 0 or 90 degrees
+				if (elev > -0.01f && elev < 0.01f) elev = 0.01f;
+				if (elev > 89.99f) elev = 89.99f;
+				if (elev < -89.99f) elev = -89.99f;
+				
 				phi = elev * dim::pi / 180.0f;
 			}
 			set_snapshot_camera_angle(theta, snapshot_radius, phi);
