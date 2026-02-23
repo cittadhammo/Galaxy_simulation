@@ -372,6 +372,39 @@ static void set_top_snapshot_camera(float radius)
 	camera.set_direction(-position);
 }
 
+static void set_snapshot_camera_continuous_rotation(float angle_degrees, float radius)
+{
+	dim::Camera& camera = dim::Window::get_camera();
+	
+	// Normalize angle to 0-360 range
+	float angle = fmodf(angle_degrees, 360.0f);
+	if (angle < 0) angle += 360.0f;
+	
+	// Use angle to determine both horizontal rotation AND vertical position
+	// This creates a full vertical orbit
+	// angle 0 = front view (z = +radius)
+	// angle 90 = top view (y = +radius)
+	// angle 180 = back view (z = -radius)
+	// angle 270 = bottom view (y = -radius)
+	// angle 360 = front again
+	
+	float angle_rad = angle * dim::pi / 180.0f;
+	
+	// Position on vertical circle (around X-axis)
+	float y = radius * sinf(angle_rad);    // 0 → 1 → 0 → -1 → 0
+	float z = radius * cosf(angle_rad);    // 1 → 0 → -1 → 0 → 1
+	
+	// Add horizontal rotation component
+	float horizontal_rotation = angle * 2.0f;  // 2x speed for horizontal
+	float horiz_rad = horizontal_rotation * dim::pi / 180.0f;
+	
+	float x = radius * cosf(horiz_rad) * 0.3f;
+	
+	dim::Vector3 position(x, y, z);
+	camera.set_position(position);
+	camera.set_direction(-position);
+}
+
 static int run_batch_mode(const BatchOptions& options, bool close_window, bool compute_steps = true)
 {
 	if (compute_steps)
@@ -404,44 +437,26 @@ static int run_batch_mode(const BatchOptions& options, bool close_window, bool c
 	{
 		if (Simulator::camera_angle >= 0.0f || options.snapshots > 1)
 		{
-			float theta = (options.snapshots > 1) ? 
-				(2.f * dim::pi * static_cast<float>(i)) / static_cast<float>(options.snapshots) : 0.f;
-			float phi = dim::pi / 3.f;
+			float angle = 0.0f;
 			if (Simulator::camera_angle >= 0.0f)
 			{
-				// Map angle to continuous orbit around sphere
-				// angle 0 = top view (theta=0, phi=90°)
-				// angle 90 = horizontal (theta=0, phi=0°)
-				// angle 180 = opposite horizontal (theta=180°, phi=0°)
-				// angle 270 = bottom view (theta=180°, phi=-90°)
-				// angle 360 = back to top
-				float a = Simulator::camera_angle;
-				float normalized = fmodf(a, 360.0f);
-				if (normalized < 0) normalized += 360.0f;
-				
-				// theta: 0 for 0-90 and 270-360, 180 for 90-270
-				if (normalized >= 90.0f && normalized < 270.0f)
-					theta += dim::pi;
-				
-				// phi (elevation): 90→0→-90→0→90
-				float elev = 0.0f;
-				if (normalized < 90.0f)
-					elev = 90.0f - normalized;  // 90→0
-				else if (normalized < 180.0f)
-					elev = normalized - 90.0f;   // 0→90
-				else if (normalized < 270.0f)
-					elev = 90.0f - (normalized - 180.0f);  // 90→0
+				if (options.snapshots == 1)
+				{
+					// Single snapshot: use camera_angle directly from config
+					angle = Simulator::camera_angle;
+				}
 				else
-					elev = (normalized - 270.0f) - 90.0f;  // 0→-90
-				
-				// Small epsilon to avoid singularity at exactly 0 or 90 degrees
-				if (elev > -0.01f && elev < 0.01f) elev = 0.01f;
-				if (elev > 89.99f) elev = 89.99f;
-				if (elev < -89.99f) elev = -89.99f;
-				
-				phi = elev * dim::pi / 180.0f;
+				{
+					// Batch mode: increment angle by camera_angle for each snapshot
+					angle = Simulator::camera_angle * static_cast<float>(i);
+				}
 			}
-			set_snapshot_camera_angle(theta, snapshot_radius, phi);
+			else
+			{
+				// Default batch mode: distribute snapshots around circle
+				angle = (360.0f * static_cast<float>(i)) / static_cast<float>(options.snapshots);
+			}
+			set_snapshot_camera_continuous_rotation(angle, snapshot_radius);
 		}
 		else
 		{
