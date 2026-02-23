@@ -60,14 +60,14 @@ physic:
 			--state-out $(DIR)/states/physics_state.bin \
 			--state-interval $(or $(STATE_INTERVAL),20) \
 			--config $(DIR)/simulation.cfg \
-			--progress-interval $(or $(PROGRESS_INTERVAL),10) \
+			--progress-interval $(or $(PROGRESS_INTERVAL),1) \
 			--steps $(or $(STEPS),2000) \
 			$(if $(DEVICE),--device $(DEVICE)),\
 		bash run_physics.sh \
 			--state-out $(DIR)/states/physics_state.bin \
 			--state-interval $(or $(STATE_INTERVAL),20) \
 			--config $(DIR)/simulation.cfg \
-			--progress-interval $(or $(PROGRESS_INTERVAL),10) \
+			--progress-interval $(or $(PROGRESS_INTERVAL),1) \
 			--steps $(or $(STEPS),2000) \
 			$(if $(DEVICE),--device $(DEVICE))\
 	)
