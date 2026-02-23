@@ -404,11 +404,38 @@ static int run_batch_mode(const BatchOptions& options, bool close_window, bool c
 	{
 		if (Simulator::camera_angle >= 0.0f || options.snapshots > 1)
 		{
-			const float theta = (options.snapshots > 1) ? 
+			float theta = (options.snapshots > 1) ? 
 				(2.f * dim::pi * static_cast<float>(i)) / static_cast<float>(options.snapshots) : 0.f;
 			float phi = dim::pi / 3.f;
 			if (Simulator::camera_angle >= 0.0f)
-				phi = (90.0f - Simulator::camera_angle) * dim::pi / 180.0f;
+			{
+				// Map angle to continuous orbit around sphere
+				// angle 0 = top view (theta=0, phi=90°)
+				// angle 90 = horizontal (theta=0, phi=0°)
+				// angle 180 = opposite horizontal (theta=180°, phi=0°)
+				// angle 270 = bottom view (theta=180°, phi=-90°)
+				// angle 360 = back to top
+				float a = Simulator::camera_angle;
+				float normalized = fmodf(a, 360.0f);
+				if (normalized < 0) normalized += 360.0f;
+				
+				// theta: 0 for 0-90 and 270-360, 180 for 90-270
+				if (normalized >= 90.0f && normalized < 270.0f)
+					theta += dim::pi;
+				
+				// phi (elevation): 90→0→-90→0→90
+				float elev = 0.0f;
+				if (normalized < 90.0f)
+					elev = 90.0f - normalized;  // 90→0
+				else if (normalized < 180.0f)
+					elev = normalized - 90.0f;   // 0→90
+				else if (normalized < 270.0f)
+					elev = 90.0f - (normalized - 180.0f);  // 90→0
+				else
+					elev = (normalized - 270.0f) - 90.0f;  // 0→-90
+				
+				phi = elev * dim::pi / 180.0f;
+			}
 			set_snapshot_camera_angle(theta, snapshot_radius, phi);
 		}
 		else

@@ -83,13 +83,13 @@ snapshot:
 		--config $(DIR)/simulation.cfg \
 		--snapshot-width $(or $(WIDTH),3840) \
 		--snapshot-height $(or $(HEIGHT),2160) \
+		--single \
 		$(if $(filter-out 0,$(HEADLESS)),--headless) \
 		$(if $(DELAY),--delay $(DELAY)) \
 		$(if $(BLOOM_RED),--bloom-red $(BLOOM_RED)) \
 		$(if $(BLOOM_BLUE),--bloom-blue $(BLOOM_BLUE)) \
 		$(if $(ANGLE),--camera-angle $(ANGLE)) \
-		$(if $(ROT),--rotation $(ROT)) \
-		$(if $(SINGLE),--single)
+		$(if $(ROT),--rotation $(ROT))
 
 view:
 	bash run_sim.sh --state-in $(IN)

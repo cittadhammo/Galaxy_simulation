@@ -257,7 +257,8 @@ make physic DIR=my_experiment STEPS=2000 STATE_INTERVAL=20
 ls outputs/my_experiment/snapshots/
 
 # Or regenerate with custom settings:
-make snapshot DIR=outputs/my_experiment OUT=preview SNAPSHOTS=6
+make snapshot DIR=outputs/my_experiment OUT=preview BLOOM_BLUE=2
+# to view a live snapshot
 make view IN=outputs/my_experiment/states/physics_state_step_200.bin
 ```
 
@@ -268,8 +269,8 @@ make movie DIR=outputs/my_experiment/snapshots
 
 ### Step 6: Create rotating video (optional)
 ```bash
-# Generate snapshots with rotation (5 degrees per checkpoint)
-make snapshot DIR=outputs/my_experiment OUT=rotate ROT=5
+# Generate snapshots with rotation (5 degrees per checkpoint) and make the resolution a square by 1000
+make snapshot DIR=outputs/my_experiment OUT=rotate ROT=5 WIDTH=1000 HEIGHT=1000 
 
 # Create rotating video
 make movie DIR=outputs/my_experiment/rotate
@@ -277,7 +278,7 @@ make movie DIR=outputs/my_experiment/rotate
 
 ### Step 7: Try new parameters
 ```bash
-# Edit simulation.cfg with new parameters, then:
+# Edit simulation.cfg with new parameters, you can explore more sim as well, then:
 make physic DIR=new_experiment STEPS=3000 STATE_INTERVAL=40
 ```
 
