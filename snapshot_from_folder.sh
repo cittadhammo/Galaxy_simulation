@@ -125,8 +125,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -n "${CAMERA_VIEW}" && "${CAMERA_VIEW}" != "top" && "${CAMERA_VIEW}" != "isometric" ]]; then
-  echo "Error: --camera must be 'top' or 'isometric'." >&2
+if [[ -n "${CAMERA_VIEW}" && "${CAMERA_VIEW}" != "top" && "${CAMERA_VIEW}" != "isometric" && "${CAMERA_VIEW}" != "front" ]]; then
+  echo "Error: --camera must be 'top', 'isometric' or 'front'." >&2
   exit 1
 fi
 

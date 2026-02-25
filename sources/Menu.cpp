@@ -351,7 +351,7 @@ void Menu::display()
 
 		Simulator::CameraView previous_camera_view = Simulator::camera_view;
 		ImGui::Text("Camera view");
-		ImGui::Combo("##camera_view", reinterpret_cast<int*>(&Simulator::camera_view), "Isometric\0Top\0");
+		ImGui::Combo("##camera_view", reinterpret_cast<int*>(&Simulator::camera_view), "Isometric\0Top\0Front\0");
 		if (Simulator::camera_view != previous_camera_view)
 			Simulator::apply_camera_view();
 		ImGui::Text("Quick view");

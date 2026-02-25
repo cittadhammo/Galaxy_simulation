@@ -233,6 +233,14 @@ void Simulator::apply_camera_view()
 		break;
 	}
 
+	case CameraView::Front:
+	{
+		const dim::Vector3 position = center + dim::Vector3(radius, 0.001f, 0.0f);
+		camera.set_position(position);
+		camera.set_direction(center - position);
+		break;
+	}
+
 	case CameraView::Isometric:
 	default:
 	{

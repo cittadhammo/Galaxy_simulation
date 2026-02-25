@@ -24,7 +24,7 @@ help:
 	@echo "  STAMP       - Add step number overlay on video frames (0 or 1, default: 0)"
 	@echo "  FPS         - Video framerate (default: 24)"
 	@echo "  DEVICE      - OpenCL device: cpu or gpu (default: auto)"
-	@echo "  CAMERA      - Camera view: top or isometric (default: top)"
+	@echo "  CAMERA      - Camera view: top, isometric or front (default: top)"
 	@echo "  BLOOM_RED   - Red bloom intensity (e.g., 1.0, 2.5)"
 	@echo "  BLOOM_BLUE  - Blue bloom intensity (e.g., 1.0, 2.5)"
 	@echo "  ANGLE       - Camera elevation angle in degrees (0-360)"

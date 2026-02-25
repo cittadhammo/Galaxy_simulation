@@ -20,7 +20,8 @@ public:
 	enum class CameraView : int
 	{
 		Isometric = 0,
-		Top = 1
+		Top = 1,
+		Front = 2
 	};
 
 	static std::atomic<bool>	computation_done;	// True if the computation is done.

@@ -125,6 +125,7 @@ static bool parse_camera_view(const std::string& text, Simulator::CameraView& va
 {
 	if (text == "isometric" || text == "iso" || text == "0") { value = Simulator::CameraView::Isometric; return true; }
 	if (text == "top" || text == "1") { value = Simulator::CameraView::Top; return true; }
+	if (text == "front" || text == "2") { value = Simulator::CameraView::Front; return true; }
 	return false;
 }
 
@@ -372,39 +373,6 @@ static void set_top_snapshot_camera(float radius)
 	camera.set_direction(-position);
 }
 
-static void set_snapshot_camera_continuous_rotation(float angle_degrees, float radius)
-{
-	dim::Camera& camera = dim::Window::get_camera();
-	
-	// Normalize angle to 0-360 range
-	float angle = fmodf(angle_degrees, 360.0f);
-	if (angle < 0) angle += 360.0f;
-	
-	// Use angle to determine both horizontal rotation AND vertical position
-	// This creates a full vertical orbit
-	// angle 0 = front view (z = +radius)
-	// angle 90 = top view (y = +radius)
-	// angle 180 = back view (z = -radius)
-	// angle 270 = bottom view (y = -radius)
-	// angle 360 = front again
-	
-	float angle_rad = angle * dim::pi / 180.0f;
-	
-	// Position on vertical circle (around X-axis)
-	float y = radius * sinf(angle_rad);    // 0 → 1 → 0 → -1 → 0
-	float z = radius * cosf(angle_rad);    // 1 → 0 → -1 → 0 → 1
-	
-	// Add horizontal rotation component
-	float horizontal_rotation = angle * 2.0f;  // 2x speed for horizontal
-	float horiz_rad = horizontal_rotation * dim::pi / 180.0f;
-	
-	float x = radius * cosf(horiz_rad) * 0.3f;
-	
-	dim::Vector3 position(x, y, z);
-	camera.set_position(position);
-	camera.set_direction(-position);
-}
-
 static int run_batch_mode(const BatchOptions& options, bool close_window, bool compute_steps = true)
 {
 	if (compute_steps)
@@ -433,30 +401,41 @@ static int run_batch_mode(const BatchOptions& options, bool close_window, bool c
 
 	const float snapshot_radius = estimate_snapshot_radius(Simulator::state);
 	std::cerr << "[DEBUG] camera_angle = " << Simulator::camera_angle << ", snapshots = " << options.snapshots << std::endl;
+	float elevation = 0.0f;
+	float elevation_direction = 1.0f;
 	for (int i = 0; i < options.snapshots; ++i)
 	{
 		if (Simulator::camera_angle >= 0.0f || options.snapshots > 1)
 		{
-			float angle = 0.0f;
+			float theta = 0.0f;
+			float phi = dim::pi / 3.f;
 			if (Simulator::camera_angle >= 0.0f)
 			{
 				if (options.snapshots == 1)
 				{
-					// Single snapshot: use camera_angle directly from config
-					angle = Simulator::camera_angle;
+					phi = (Simulator::camera_angle + 0.001f) * dim::pi / 180.0f;
 				}
 				else
 				{
-					// Batch mode: increment angle by camera_angle for each snapshot
-					angle = Simulator::camera_angle * static_cast<float>(i);
+					elevation += Simulator::camera_angle * elevation_direction;
+					if (elevation >= 89.9f)
+					{
+						elevation = 89.9f;
+						elevation_direction = -1.0f;
+					}
+					else if (elevation <= -89.9f)
+					{
+						elevation = -89.9f;
+						elevation_direction = 1.0f;
+					}
+					phi = (elevation + 0.001f) * dim::pi / 180.0f;
 				}
 			}
 			else
 			{
-				// Default batch mode: distribute snapshots around circle
-				angle = (360.0f * static_cast<float>(i)) / static_cast<float>(options.snapshots);
+				theta = (360.0f * static_cast<float>(i)) / static_cast<float>(options.snapshots) * dim::pi / 180.0f;
 			}
-			set_snapshot_camera_continuous_rotation(angle, snapshot_radius);
+			set_snapshot_camera_angle(theta, snapshot_radius, phi);
 		}
 		else
 		{

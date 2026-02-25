@@ -38,8 +38,14 @@ sudo apt-get install -y \
   ffmpeg \
 ```
 
- - Remove imagemagick line from make snapshot and do not use stamp option
- - Remove two line containing (one line and one block) containing the scaling of the panning.
+- Remove imagemagick line 99 from make snapshot and do not use stamp option
+
+- Remove two line containing (one line and one block) containing the scaling of the panning. where `set_pan_multiplier` appears
+
+In sources/Simulator.cpp comment out lines 38-42
+
+In sources/Menu.cpp line 410
+
 
 ---
 
