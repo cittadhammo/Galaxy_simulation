@@ -38,13 +38,11 @@ sudo apt-get install -y \
   ffmpeg \
 ```
 
-- Remove imagemagick line 99 from make snapshot and do not use stamp option
+Comment out cloud-incompatible lines (Menu UI panning code and ImageMagick check):
 
-- Remove two line containing (one line and one block) containing the scaling of the panning. where `set_pan_multiplier` appears
-
-In sources/Simulator.cpp comment out lines 38-42
-
-In sources/Menu.cpp line 410
+```bash
+make cloud-comment
+```
 
 
 ---

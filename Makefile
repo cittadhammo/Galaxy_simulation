@@ -1,4 +1,4 @@
-.PHONY: help physic sim snapshot view movie
+.PHONY: help physic sim snapshot view movie cloud-comment cloud-uncomment
 
 HEADLESS := 1
 
@@ -98,3 +98,15 @@ movie:
 	@if ! command -v ffmpeg >/dev/null 2>&1; then echo "Error: ffmpeg not installed"; exit 1; fi && \
 	if ! command -v magick >/dev/null 2>&1; then echo "Error: ImageMagick not installed"; exit 1; fi && \
 	bash _make_movie.sh "$(DIR)" "$(or $(STAMP),0)" "$(or $(FPS),24)"
+
+cloud-comment:
+	@echo "Commenting cloud-incompatible lines..."
+	@sed -i '38,42s/^/\/\/ /' sources/Simulator.cpp
+	@sed -i '401s/^/\/\/ /' sources/Menu.cpp
+	@sed -i '99s/^/#/' Makefile
+
+cloud-uncomment:
+	@echo "Uncommenting cloud-incompatible lines..."
+	@sed -i '38,42s/^\/\/ //' sources/Simulator.cpp
+	@sed -i '401s/^\/\/ //' sources/Menu.cpp
+	@sed -i '99s/^#//' Makefile
