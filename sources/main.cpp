@@ -460,7 +460,7 @@ static int run_batch_mode(const BatchOptions& options, bool close_window, bool c
 		}
 		else
 		{
-			set_top_snapshot_camera(snapshot_radius);
+			Simulator::apply_camera_view();
 		}
 
 		// Warm up one frame before capture so post-process buffers are populated.

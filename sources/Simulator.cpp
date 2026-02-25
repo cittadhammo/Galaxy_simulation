@@ -213,7 +213,7 @@ void Simulator::apply_camera_view()
 		center = orbit.get_center();
 	}
 
-	if (camera_angle != 0.0f)
+	if (camera_angle >= 0.0f)
 	{
 		dim::Vector3 position(0.f, 0.f, radius);
 		position.set_phi((90.0f - camera_angle) * dim::pi / 180.0f);

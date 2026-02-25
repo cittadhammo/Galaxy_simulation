@@ -498,6 +498,14 @@ int main(int argc, char** argv)
 	}
 
 	std::cout << "[Physics] running " << options.steps << " steps, stars=" << config.nb_stars << std::endl;
+
+	if (!options.state_out.empty() && options.state_interval > 0)
+	{
+		const std::string checkpoint_path = build_step_labeled_path(options.state_out, 0);
+		if (write_state_file(checkpoint_path, state))
+			std::cout << "[Physics] wrote checkpoint: " << checkpoint_path << std::endl;
+	}
+
 	const int progress_interval = options.progress_interval;
 	for (int i = 0; i < options.steps; ++i)
 	{

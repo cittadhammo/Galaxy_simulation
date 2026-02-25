@@ -58,7 +58,7 @@ physic:
 			--worker-snapshot-height 2160 \
 			-- \
 			--state-out $(DIR)/states/physics_state.bin \
-			--state-interval $(or $(STATE_INTERVAL),20) \
+			--state-interval $(or $(STATE_INTERVAL),3) \
 			--config $(DIR)/simulation.cfg \
 			--progress-interval $(or $(PROGRESS_INTERVAL),1) \
 			--steps $(or $(STEPS),2000) \
